@@ -203,6 +203,16 @@ export function useStudentActions(params: StudentActionParams) {
       ...prev,
       notifications: [newNotif, ...prev.notifications],
     }));
+
+    if (supabaseService.isAvailable()) {
+      supabaseService.createNotification({
+        studentCode: currentStudent.id,
+        title: newNotif.title,
+        message: newNotif.message,
+        type: 'wallet',
+      });
+    }
+
     showToast('Parent Notified', `Top-up request sent to ${currentStudent.parentName}'s Parent Portal.`, 'success');
   };
 
@@ -254,6 +264,15 @@ export function useStudentActions(params: StudentActionParams) {
           ...prev,
           notifications: [limitNotif, ...prev.notifications],
         }));
+
+        if (supabaseService.isAvailable()) {
+          supabaseService.createNotification({
+            studentCode: currentStudent.id,
+            title: limitNotif.title,
+            message: limitNotif.message,
+            type: 'alert',
+          });
+        }
       }
       showToast('Transaction Blocked', blocker, 'error');
       return;

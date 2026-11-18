@@ -31,30 +31,16 @@ export type { CampusKartContextType };
 const CampusKartContext = createContext<CampusKartContextType | null>(null);
 
 export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // 1. Ecosystem Shared State
+  // 1. Ecosystem Shared State (Authoritative source of truth: Supabase PostgreSQL)
   const [ecosystem, setEcosystem] = useState<EcosystemState>(() => {
     try {
-      localStorage.removeItem('campuskart_ecosystem_v4_clean'); // Purge legacy catalog cache
-      const saved = localStorage.getItem('campuskart_ecosystem_v5_catalog');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed?.students && parsed?.products && parsed?.transactions && parsed.products.length >= 70) {
-          return parsed;
-        }
-      }
+      localStorage.removeItem('campuskart_ecosystem_v4_clean');
+      localStorage.removeItem('campuskart_ecosystem_v5_catalog');
     } catch {
       // Ignore storage error
     }
     return INITIAL_STATE;
   });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('campuskart_ecosystem_v5_catalog', JSON.stringify(ecosystem));
-    } catch {
-      // Ignore storage error
-    }
-  }, [ecosystem]);
 
   // 2. Active Portal & Toast
   const [activePortal, setActivePortal] = useState<PortalType | string>('student');
@@ -128,6 +114,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
               ...(liveData.orders ? { orders: liveData.orders } : {}),
               ...(liveData.transactions ? { transactions: liveData.transactions } : {}),
               ...(liveData.spendingControls ? { spendingControls: liveData.spendingControls } : {}),
+              ...(liveData.notifications ? { notifications: liveData.notifications } : {}),
             }));
             setBackendConnected(true);
             return;

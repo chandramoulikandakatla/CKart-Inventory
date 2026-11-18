@@ -56,20 +56,20 @@ export function createInitialStore(): BackendStore {
     parents: [
       {
         id: 'PAR-501',
-        mobile: '9848022334',
-        password_hash: hashSecret('9999'),
+        mobile: '9876543210',
+        password_hash: hashSecret('parent123'),
         name: 'Rajesh Sharma',
       },
       {
         id: 'PAR-502',
         mobile: '9440177889',
-        password_hash: hashSecret('8888'),
+        password_hash: hashSecret('parent123'),
         name: 'Lakshmi Reddy',
       },
       {
         id: 'PAR-503',
         mobile: '9848055667',
-        password_hash: hashSecret('7777'),
+        password_hash: hashSecret('parent123'),
         name: 'Vikram Verma',
       },
     ],
@@ -90,8 +90,8 @@ export function createInitialStore(): BackendStore {
       },
     ],
     wallets: new Map([
-      ['STU-101', { student_id: 'STU-101', balance_paise: 0, status: 'active' }],
-      ['STU-102', { student_id: 'STU-102', balance_paise: 0, status: 'active' }],
+      ['STU-101', { student_id: 'STU-101', balance_paise: 85000, status: 'active' }],
+      ['STU-102', { student_id: 'STU-102', balance_paise: 120000, status: 'active' }],
       ['STU-103', { student_id: 'STU-103', balance_paise: 0, status: 'active' }],
     ]),
     products: [

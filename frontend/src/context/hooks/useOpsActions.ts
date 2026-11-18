@@ -101,9 +101,15 @@ export function useOpsActions(params: OpsActionParams) {
       }),
     }));
 
-    if (supabaseService.isAvailable() && newStock !== undefined) {
+    if (supabaseService.isAvailable()) {
       const p = ecosystem.products.find((prod) => prod.id === productId);
-      supabaseService.updateProductStock(productId, p?.name || '', Math.max(0, Number(newStock)));
+      supabaseService.updateProductStock(
+        productId,
+        p?.name || '',
+        newStock,
+        newPrice,
+        toggleActive
+      );
     }
 
     showToast('Catalogue Updated', `Product ${productId} inventory synced with Student Shop.`, 'success');
@@ -140,19 +146,30 @@ export function useOpsActions(params: OpsActionParams) {
       offerTag: 'New Arrival',
       description: '',
     });
+
+    if (supabaseService.isAvailable()) {
+      supabaseService.createProduct(prod);
+    }
+
     showToast('Product Created', `${prod.name} (${prod.id}) is now live in the Student Catalogue.`, 'success');
   };
 
   const handleOpsToggleStudentStatus = (studentId: string) => {
+    let next: 'Active' | 'Inactive' = 'Active';
     setEcosystem((prev) => ({
       ...prev,
       students: prev.students.map((s) => {
         if (s.id !== studentId) return s;
-        const next: 'Active' | 'Inactive' = s.status === 'Active' ? 'Inactive' : 'Active';
+        next = s.status === 'Active' ? 'Inactive' : 'Active';
         return { ...s, status: next };
       }),
     }));
-    showToast('Student Status Updated', `Account ${studentId} status toggled.`, 'info');
+
+    if (supabaseService.isAvailable()) {
+      supabaseService.updateStudentStatus(studentId, next);
+    }
+
+    showToast('Student Status Updated', `Account ${studentId} status set to ${next}.`, 'info');
   };
 
   const handleOpsCreateStudent = (e: React.FormEvent) => {
@@ -232,6 +249,11 @@ export function useOpsActions(params: OpsActionParams) {
       parentName: '',
       initialWallet: 500,
     });
+
+    if (supabaseService.isAvailable()) {
+      supabaseService.enrollStudent(newStu, initBal);
+    }
+
     showToast(
       'Student Enrolled',
       `${newStu.name} registered with ID ${newId} (Pass: PASS${idx}, PIN: 1234).`,
@@ -294,6 +316,17 @@ export function useOpsActions(params: OpsActionParams) {
         ...prev.notifications,
       ],
     }));
+
+    if (supabaseService.isAvailable()) {
+      supabaseService.recordManualAdjustment({
+        studentCode: stu.id,
+        amountRupees: rawAmt,
+        type: manualAdjForm.type,
+        reason: manualAdjForm.reason.trim(),
+        operator: manualAdjForm.operator,
+      });
+    }
+
     showToast('Adjustment Applied', `₹${rawAmt} ${manualAdjForm.type} recorded with immutable audit ID ${txnId}.`, 'success');
   };
 
