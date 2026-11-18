@@ -29,6 +29,8 @@ venv/
 *.db
 *.sqlite
 *.sqlite3
+campuskart_data.json
+*.tmp*
 
 # Editor and OS
 .vscode/

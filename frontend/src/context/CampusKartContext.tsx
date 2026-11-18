@@ -249,10 +249,28 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
   const [showDemoModal, setShowDemoModal] = useState(false);
   const [receiptModalOrder, setReceiptModalOrder] = useState<Order | null>(null);
 
-  // Student state
-  const [studentScreen, setStudentScreen] = useState<StudentScreen | string>('welcome');
-  const [loggedStudentId, setLoggedStudentId] = useState('CK-2026-101');
-  const [studentAuthed, setStudentAuthed] = useState(false);
+  // Student state with persistent local storage
+  const [studentScreen, setStudentScreen] = useState<StudentScreen | string>(() => {
+    try {
+      return localStorage.getItem('campuskart_student_screen') || 'welcome';
+    } catch {
+      return 'welcome';
+    }
+  });
+  const [loggedStudentId, setLoggedStudentId] = useState<string>(() => {
+    try {
+      return localStorage.getItem('campuskart_logged_student_id') || 'CK-2026-101';
+    } catch {
+      return 'CK-2026-101';
+    }
+  });
+  const [studentAuthed, setStudentAuthed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('campuskart_student_authed') === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   const [credIdInput, setCredIdInput] = useState('CK-2026-101');
   const [credPassInput, setCredPassInput] = useState('PASS101');
@@ -268,7 +286,14 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
   const [selectedProductId, setSelectedProductId] = useState('PRD-001');
   const [detailQty, setDetailQty] = useState(1);
   const [recentlyViewed, setRecentlyViewed] = useState(['PRD-001', 'PRD-005']);
-  const [cart, setCart] = useState<Array<{ productId: string; qty: number }>>([]);
+  const [cart, setCart] = useState<Array<{ productId: string; qty: number }>>(() => {
+    try {
+      const saved = localStorage.getItem('campuskart_cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [processedIdempotencyKeys, setProcessedIdempotencyKeys] = useState<string[]>([]);
   const [activeIdempotencyKey, setActiveIdempotencyKey] = useState('');
   const [backendConnected, setBackendConnected] = useState(false);
@@ -313,13 +338,46 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
   const [orderFilter, setOrderFilter] = useState('All Orders');
   const [trackingOrderId, setTrackingOrderId] = useState('ORD-2026-8803');
 
-  // Parent state
-  const [parentScreen, setParentScreen] = useState<ParentScreen | string>('welcome');
-  const [parentAuthed, setParentAuthed] = useState(false);
+  // Parent state with persistent local storage
+  const [parentScreen, setParentScreen] = useState<ParentScreen | string>(() => {
+    try {
+      return localStorage.getItem('campuskart_parent_screen') || 'welcome';
+    } catch {
+      return 'welcome';
+    }
+  });
+  const [parentAuthed, setParentAuthed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('campuskart_parent_authed') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [parentLookupStudentId, setParentLookupStudentId] = useState('CK-2026-101');
   const [parentPinInput, setParentPinInput] = useState('9999');
   const [parentAuthError, setParentAuthError] = useState('');
-  const [linkedStudentId, setLinkedStudentId] = useState('CK-2026-101');
+  const [linkedStudentId, setLinkedStudentId] = useState<string>(() => {
+    try {
+      return localStorage.getItem('campuskart_parent_linked_student_id') || 'CK-2026-101';
+    } catch {
+      return 'CK-2026-101';
+    }
+  });
+
+  // Automatically persist all student and parent session steps
+  useEffect(() => {
+    try {
+      localStorage.setItem('campuskart_student_screen', String(studentScreen));
+      localStorage.setItem('campuskart_logged_student_id', loggedStudentId);
+      localStorage.setItem('campuskart_student_authed', String(studentAuthed));
+      localStorage.setItem('campuskart_parent_screen', String(parentScreen));
+      localStorage.setItem('campuskart_parent_authed', String(parentAuthed));
+      localStorage.setItem('campuskart_parent_linked_student_id', linkedStudentId);
+      localStorage.setItem('campuskart_cart', JSON.stringify(cart));
+    } catch (e) {
+      // Ignore storage errors
+    }
+  }, [studentScreen, loggedStudentId, studentAuthed, parentScreen, parentAuthed, linkedStudentId, cart]);
 
   const [fundAmount, setFundAmount] = useState(1000);
   const [customFundInput, setCustomFundInput] = useState('1000');
@@ -1121,6 +1179,22 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
     setEcosystem(INITIAL_STATE);
     setCart([]);
     setProcessedIdempotencyKeys([]);
+    setStudentAuthed(false);
+    setStudentScreen('welcome');
+    setParentAuthed(false);
+    setParentScreen('welcome');
+    try {
+      localStorage.removeItem('campuskart_ecosystem_v4_clean');
+      localStorage.removeItem('campuskart_student_screen');
+      localStorage.removeItem('campuskart_logged_student_id');
+      localStorage.removeItem('campuskart_student_authed');
+      localStorage.removeItem('campuskart_parent_screen');
+      localStorage.removeItem('campuskart_parent_authed');
+      localStorage.removeItem('campuskart_parent_linked_student_id');
+      localStorage.removeItem('campuskart_cart');
+    } catch (e) {
+      // ignore storage errors
+    }
     showToast('Demo State Reset', 'All portals restored to clean seeded evaluation data.', 'info');
   };
 

@@ -59,3 +59,14 @@ This log documents all technical actions, refactoring milestones, and architectu
   - `npm run test` executes `backend/test_backend.ts` with 100% pass rate.
   - `npm run build` runs `tsc -b && vite build` successfully with zero type or build errors.
   - Zero `.py` files remain in the repository.
+
+---
+
+## Milestone 6: Durable Step-by-Step Student Data Persistence Architecture
+- **Problem**: Previously, student session data, wallet top-ups, checkout orders, spending limit changes, and ops adjustments existed only in volatile server memory and volatile frontend React state, causing state resets on page reloads or server restarts.
+- **Action**:
+  - **Backend Atomic Persistence**: Built safe file-backed database storage (`campuskart_data.json`) with atomic write semantics (`fs.writeFileSync` to temporary file + `fs.renameSync`). Every mutation (top-up, checkout, spending controls update, ops adjustment, student registration, status toggle) is immediately and atomically saved to disk.
+  - **Cold Restart Recovery**: Server automatically loads all student accounts, wallets, orders, and ledger transactions on startup via `loadStore()`.
+  - **Frontend Multi-Step Session Hydration**: Configured `CampusKartContext.tsx` to persist active student authentication, session tokens, selected screens, parent login, and active cart in `localStorage`. Page reloads immediately restore exact user state.
+  - **Strict 7-Step Lifecycle Protocol**: Enforced a clear data lifecycle: Enrollment -> Dual-Factor Verification -> Session Hydration -> Pre-Transaction Compliance -> Atomic Checkout with Idempotency -> Durable Commitment -> Order Tracking & Notifications.
+  - **Automated Verification**: Added Test 3 to `backend/test_backend.ts` validating student enrollment, wallet updates, checkout, and disk reloading across simulated server restarts with 100% pass rate.

@@ -1,12 +1,17 @@
 /**
  * CampusKart TypeScript Integration & Ecosystem Verification Test Suite
  * Fully asynchronous, testing all roles, authentication steps, spending controls,
- * atomic checkout with idempotency deduplication, and privacy guarantees.
+ * atomic checkout with idempotency deduplication, and persistent data storage.
  */
 
 import http from 'node:http';
-import { createServer, resetStore } from './server.ts';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createServer, resetStore, loadStore, DATA_FILE } from './server.ts';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const TEST_PORT = 8999;
 let server: http.Server;
 
@@ -57,7 +62,7 @@ function assert(condition: boolean, msg: string) {
 }
 
 async function runTests() {
-  console.log('[Test] Starting CampusKart TypeScript Ecosystem Tests...');
+  console.log('[Test] Starting CampusKart TypeScript Ecosystem & Persistence Tests...');
   resetStore();
   server = createServer();
   await new Promise<void>((resolve) => server.listen(TEST_PORT, '127.0.0.1', resolve));
@@ -143,8 +148,7 @@ async function runTests() {
     assert(fundRes.status === 200, 'Parent funding should succeed');
     assert(fundRes.data.new_balance_paise === 135000, 'New balance should be 85000 + 50000 = 135000 paise');
 
-    // Student checks out with Casio Calculator (Rs 1250 = 125,000 paise is > 25,000 single txn limit)
-    // First, let's update spending controls to allow larger purchase
+    // Update spending controls
     await apiRequest(
       '/api/parent/spending-controls',
       'POST',
@@ -169,7 +173,7 @@ async function runTests() {
     assert(checkoutRes.data.total_amount_paise === 13000, 'Total should be 13000 paise');
     assert(checkoutRes.data.new_balance_paise === 122000, 'Balance after checkout should be 122000 paise');
 
-    // Idempotency replay check: Calling again with same key returns identical order without double charge
+    // Idempotency replay check
     const replayRes = await apiRequest(
       '/api/checkout',
       'POST',
@@ -222,13 +226,91 @@ async function runTests() {
     assert(adjRes.status === 200, 'Ops manual adjustment should succeed');
     assert(adjRes.data.new_balance_paise === 127000, 'Balance should reflect credit');
 
-    // College dashboard privacy check: aggregate metrics without student personal data
+    // College dashboard privacy check
     const collegeDash = await apiRequest('/api/college/dashboard', 'GET', undefined, collegeToken);
     assert(collegeDash.status === 200, 'College dashboard should succeed');
     assert(collegeDash.data.kpis.total_orders > 0, 'College sees aggregate total orders');
     assert(!collegeDash.data.students, 'College dashboard must NOT leak individual student records');
 
     console.log('  -> Test 2 Passed: Full cross-portal workflow and privacy verified.');
+
+    // -------------------------------------------------------------
+    // Test 3: Step-by-Step Student Data Persistence Across Restarts
+    // -------------------------------------------------------------
+    console.log('[Test 3] Testing durable disk persistence for student data and lifecycle...');
+
+    // Ops creates a new student: Sneha Patel with Rs 300 (30,000 paise) initial wallet
+    const createStuRes = await apiRequest(
+      '/api/ops/students',
+      'POST',
+      {
+        name: 'Sneha Patel',
+        academic_year: 'Grade 11 - MPC',
+        parent_name: 'Vikram Patel',
+        initial_wallet_paise: 30000,
+        pin: '5678',
+        password: 'PASS_SNEHA',
+      },
+      opsToken
+    );
+    assert(createStuRes.status === 201, 'Student enrollment should succeed with 201');
+    const newStudentCode = createStuRes.data.student.student_code;
+    const newStudentId = createStuRes.data.student.id;
+    assert(Boolean(newStudentCode), 'Should receive student_code');
+    assert(createStuRes.data.student.wallet_balance_paise === 30000, 'Initial balance must be 30,000 paise');
+
+    // Verify file exists on disk
+    assert(fs.existsSync(DATA_FILE), 'Data file must exist on disk');
+
+    // Read the file directly to simulate an external process / server restart
+    const reloadedStore = loadStore(DATA_FILE);
+    const persistedStudent = reloadedStore.students.find((s) => s.student_code === newStudentCode);
+    assert(Boolean(persistedStudent), 'Newly enrolled student must be persisted in storage');
+    assert(persistedStudent?.first_name === 'Sneha', 'Persisted name must match');
+
+    const persistedWallet = reloadedStore.wallets.get(newStudentId);
+    assert(Boolean(persistedWallet), 'Wallet must be persisted');
+    assert(persistedWallet?.balance_paise === 30000, 'Persisted wallet balance must be 30,000 paise');
+
+    // Authenticate the newly enrolled student from persisted credentials
+    const snehaLogin = await apiRequest('/api/auth/login', 'POST', {
+      student_code: newStudentCode,
+      password: 'PASS_SNEHA',
+    });
+    assert(snehaLogin.status === 200, 'Persisted student can log in');
+
+    const snehaPin = await apiRequest('/api/auth/verify-pin', 'POST', {
+      pre_auth_token: snehaLogin.data.pre_auth_token,
+      pin: '5678',
+    });
+    assert(snehaPin.status === 200, 'Persisted student PIN verified');
+    const snehaToken = snehaPin.data.session_token;
+
+    // Student places order: 1 x Casio Calculator or 1 x Amul Buttermilk (1500 paise)
+    const snehaOrder = await apiRequest(
+      '/api/checkout',
+      'POST',
+      {
+        items: [{ product_id: 'PRD-004', quantity: 1 }], // 1500 paise
+        fulfilment_method: 'Campus Kiosk Pickup',
+        collection_point: 'Science Block Kiosk',
+        idempotency_key: `sneha-order-${Date.now()}`,
+      },
+      snehaToken
+    );
+    assert(snehaOrder.status === 200, 'Sneha checkout should succeed');
+    assert(snehaOrder.data.new_balance_paise === 28500, 'Balance after checkout should be 28,500 paise');
+
+    // Re-verify persistence from disk after checkout
+    const storeAfterCheckout = loadStore(DATA_FILE);
+    const reloadedSnehaWallet = storeAfterCheckout.wallets.get(newStudentId);
+    assert(reloadedSnehaWallet?.balance_paise === 28500, 'Persisted balance after checkout must be 28,500 paise');
+
+    const reloadedOrder = storeAfterCheckout.orders.find((o) => o.id === snehaOrder.data.order_id);
+    assert(Boolean(reloadedOrder), 'Order must be permanently saved to disk');
+    assert(reloadedOrder?.total_amount_paise === 1500, 'Order amount must match');
+
+    console.log('  -> Test 3 Passed: Step-by-step student data persistence and lifecycle verified.');
     console.log('\n[Success] ALL TYPESCRIPT TESTS PASSED (100% OK)');
   } finally {
     server.close();

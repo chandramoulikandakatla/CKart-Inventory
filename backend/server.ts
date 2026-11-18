@@ -1,7 +1,7 @@
 /**
  * CampusKart High-Performance TypeScript Backend Server
  * 100% TypeScript with zero external C-dependencies, running natively on tsx.
- * Full integer paise monetary accounting, atomic order processing, and Supabase integration.
+ * Full integer paise monetary accounting, atomic order processing, durable JSON file persistence, and Supabase integration.
  */
 
 import http from 'node:http';
@@ -33,20 +33,21 @@ function loadEnv(filePath: string) {
 loadEnv(path.resolve(__dirname, '../.env'));
 loadEnv(path.resolve(__dirname, './.env'));
 
-const PORT = parseInt(process.env.PORT || '8080', 10);
-const HOST = process.env.HOST || '127.0.0.1';
-const SESSION_SECRET = process.env.CAMPUSKART_SESSION_SECRET || 'campuskart-ts-secure-secret-key-2026';
-const SUPABASE_URL = process.env.SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
+export const PORT = parseInt(process.env.PORT || '8080', 10);
+export const HOST = process.env.HOST || '127.0.0.1';
+export const SESSION_SECRET = process.env.CAMPUSKART_SESSION_SECRET || 'campuskart-ts-secure-secret-key-2026';
+export const SUPABASE_URL = process.env.SUPABASE_URL || '';
+export const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
+export const DATA_FILE = process.env.CAMPUSKART_DB_FILE || path.resolve(__dirname, 'campuskart_data.json');
 
 // --- Cryptography & Tokens ---
-function hashSecret(secret: string, saltHex?: string): string {
+export function hashSecret(secret: string, saltHex?: string): string {
   const salt = saltHex ? Buffer.from(saltHex, 'hex') : crypto.randomBytes(16);
   const derived = crypto.pbkdf2Sync(secret, salt, 100000, 32, 'sha256');
   return `${salt.toString('hex')}:${derived.toString('hex')}`;
 }
 
-function verifySecret(secret: string, combined: string): boolean {
+export function verifySecret(secret: string, combined: string): boolean {
   try {
     const [saltHex, hashHex] = combined.split(':');
     if (!saltHex || !hashHex) return false;
@@ -68,7 +69,7 @@ interface SessionData {
 
 const activeTokens = new Map<string, SessionData>();
 
-function generateToken(role: SessionData['role'], entityId: string, metadata?: Record<string, any>, ttlSeconds = 86400): string {
+export function generateToken(role: SessionData['role'], entityId: string, metadata?: Record<string, any>, ttlSeconds = 86400): string {
   const token = crypto.randomBytes(32).toString('hex');
   activeTokens.set(token, {
     role,
@@ -79,7 +80,7 @@ function generateToken(role: SessionData['role'], entityId: string, metadata?: R
   return token;
 }
 
-function verifyToken(token: string): SessionData | null {
+export function verifyToken(token: string): SessionData | null {
   const session = activeTokens.get(token);
   if (!session) return null;
   if (Date.now() > session.expiresAt) {
@@ -92,7 +93,7 @@ function verifyToken(token: string): SessionData | null {
 // Pre-auth tokens for 2-step student authentication
 const preAuthTokens = new Map<string, { studentId: string; expiresAt: number }>();
 
-// --- In-Memory Canonical Store (Zero-Dependency & Instant Boot) ---
+// --- Backend Store Domain Models ---
 export interface BackendStore {
   colleges: Array<{ id: string; name: string; institution_code: string; collection_points: string[] }>;
   students: Array<{
@@ -174,7 +175,7 @@ export interface BackendStore {
 }
 
 export function createInitialStore(): BackendStore {
-  const store: BackendStore = {
+  return {
     colleges: [
       {
         id: 'COL-001',
@@ -356,13 +357,80 @@ export function createInitialStore(): BackendStore {
       },
     ],
   };
-  return store;
 }
 
-let store = createInitialStore();
+// --- Durable Persistence Layer (Loaded and Saved in Each Step) ---
+interface SerializedStore {
+  colleges: BackendStore['colleges'];
+  students: BackendStore['students'];
+  parents: BackendStore['parents'];
+  staff: BackendStore['staff'];
+  wallets: Record<string, { student_id: string; balance_paise: number; status: string }>;
+  products: BackendStore['products'];
+  orders: BackendStore['orders'];
+  transactions: BackendStore['transactions'];
+  spending_controls: Record<string, {
+    daily_limit_paise: number;
+    single_txn_limit_paise: number;
+    allowed_categories: string[];
+    card_locked: boolean;
+  }>;
+  notifications: BackendStore['notifications'];
+}
 
-export function resetStore(): void {
+export function saveStore(storeToSave: BackendStore, filePath: string = DATA_FILE): void {
+  try {
+    const serialized: SerializedStore = {
+      colleges: storeToSave.colleges,
+      students: storeToSave.students,
+      parents: storeToSave.parents,
+      staff: storeToSave.staff,
+      wallets: Object.fromEntries(storeToSave.wallets),
+      products: storeToSave.products,
+      orders: storeToSave.orders,
+      transactions: storeToSave.transactions,
+      spending_controls: Object.fromEntries(storeToSave.spending_controls),
+      notifications: storeToSave.notifications,
+    };
+    const tmpPath = `${filePath}.tmp.${Date.now()}`;
+    fs.writeFileSync(tmpPath, JSON.stringify(serialized, null, 2), 'utf-8');
+    fs.renameSync(tmpPath, filePath);
+  } catch (err) {
+    console.error('[CampusKart] Error persisting data store:', err);
+  }
+}
+
+export function loadStore(filePath: string = DATA_FILE): BackendStore {
+  try {
+    if (fs.existsSync(filePath)) {
+      const raw = fs.readFileSync(filePath, 'utf-8');
+      const data: SerializedStore = JSON.parse(raw);
+      return {
+        colleges: data.colleges || [],
+        students: data.students || [],
+        parents: data.parents || [],
+        staff: data.staff || [],
+        wallets: new Map(Object.entries(data.wallets || {})),
+        products: data.products || [],
+        orders: data.orders || [],
+        transactions: data.transactions || [],
+        spending_controls: new Map(Object.entries(data.spending_controls || {})),
+        notifications: data.notifications || [],
+      };
+    }
+  } catch (err) {
+    console.error('[CampusKart] Error loading persisted data store, falling back to seed:', err);
+  }
+  const initial = createInitialStore();
+  saveStore(initial, filePath);
+  return initial;
+}
+
+export let store: BackendStore = loadStore(DATA_FILE);
+
+export function resetStore(filePath: string = DATA_FILE): void {
   store = createInitialStore();
+  saveStore(store, filePath);
   activeTokens.clear();
   preAuthTokens.clear();
 }
@@ -428,7 +496,10 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
     return sendJson(res, 200, {
       status: 'ok',
       engine: 'TypeScript-Native',
+      persisted_file: DATA_FILE,
       supabase_configured: Boolean(SUPABASE_URL && SUPABASE_ANON_KEY),
+      students_count: store.students.length,
+      orders_count: store.orders.length,
       timestamp: new Date().toISOString(),
     });
   }
@@ -440,6 +511,10 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
       const student = store.students.find((s) => s.student_code === student_code);
       if (!student || !verifySecret(password, student.password_hash)) {
         return sendJson(res, 401, { error: 'Invalid student credentials' });
+      }
+
+      if (student.account_status !== 'active') {
+        return sendJson(res, 403, { error: `Account is ${student.account_status}. Please contact campus admin.` });
       }
 
       const college = store.colleges.find((c) => c.id === student.college_id);
@@ -650,6 +725,17 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
     return sendJson(res, 200, {
       products: store.products,
       orders: store.orders,
+      students: store.students.map((s) => {
+        const w = store.wallets.get(s.id);
+        return {
+          id: s.id,
+          student_code: s.student_code,
+          name: `${s.first_name} ${s.last_name}`,
+          academic_year: s.academic_year,
+          account_status: s.account_status,
+          wallet_balance_paise: w ? w.balance_paise : 0,
+        };
+      }),
       students_count: store.students.length,
     });
   }
@@ -675,7 +761,7 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
     });
   }
 
-  // 12. Simulate / Parent Top-Up
+  // 12. Simulate / Parent Top-Up (Persisted)
   if ((pathname === '/api/wallet/simulate-topup' || pathname === '/api/parent/fund') && method === 'POST') {
     parseJsonBody(req).then((body) => {
       const token = getAuthHeader(req);
@@ -709,6 +795,9 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
         created_at: new Date().toISOString(),
       });
 
+      // Persist state immediately
+      saveStore(store, DATA_FILE);
+
       return sendJson(res, 200, {
         reference: ref,
         new_balance_paise: wallet.balance_paise,
@@ -718,7 +807,7 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
     return;
   }
 
-  // 13. Parent Update Spending Controls
+  // 13. Parent Update Spending Controls (Persisted)
   if (pathname === '/api/parent/spending-controls' && method === 'POST') {
     const token = getAuthHeader(req);
     const session = token ? verifyToken(token) : null;
@@ -741,12 +830,16 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
       if (body.card_locked !== undefined) controls.card_locked = body.card_locked;
 
       store.spending_controls.set(studentId, controls);
+
+      // Persist state immediately
+      saveStore(store, DATA_FILE);
+
       return sendJson(res, 200, { success: true, controls });
     }).catch((err) => sendJson(res, 400, { error: err.message }));
     return;
   }
 
-  // 14. Ops Wallet Manual Adjustment
+  // 14. Ops Wallet Manual Adjustment (Persisted)
   if (pathname === '/api/ops/wallet/adjust' && method === 'POST') {
     const token = getAuthHeader(req);
     const session = token ? verifyToken(token) : null;
@@ -786,6 +879,9 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
         created_at: new Date().toISOString(),
       });
 
+      // Persist state immediately
+      saveStore(store, DATA_FILE);
+
       return sendJson(res, 200, {
         success: true,
         reference: ref,
@@ -795,7 +891,7 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
     return;
   }
 
-  // 15. Ops Update Order Status
+  // 15. Ops Update Order Status (Persisted)
   if (pathname === '/api/ops/orders/status' && method === 'POST') {
     const token = getAuthHeader(req);
     const session = token ? verifyToken(token) : null;
@@ -809,12 +905,190 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
       if (!order) return sendJson(res, 404, { error: 'Order not found' });
 
       order.fulfilment_status = status;
+
+      // Add student notification
+      store.notifications.unshift({
+        id: `NTF-${Date.now()}`,
+        student_id: order.student_id,
+        title: `Order ${order.reference} Status Updated`,
+        message: `Your order is now: ${status}`,
+        is_read: false,
+        created_at: new Date().toISOString(),
+      });
+
+      // Persist state immediately
+      saveStore(store, DATA_FILE);
+
       return sendJson(res, 200, { success: true, order_id: order.id, status });
     }).catch((err) => sendJson(res, 400, { error: err.message }));
     return;
   }
 
-  // 16. Checkout (Atomic Order Placement with Idempotency)
+  // 16. Ops Enroll New Student (Persisted)
+  if (pathname === '/api/ops/students' && method === 'POST') {
+    const token = getAuthHeader(req);
+    const session = token ? verifyToken(token) : null;
+    if (!session || session.role !== 'ops') {
+      return sendJson(res, 403, { error: 'Unauthorized: Operations staff access only' });
+    }
+
+    parseJsonBody(req).then((body) => {
+      const { name, academic_year, parent_name, initial_wallet_paise, parent_mobile, pin, password } = body;
+      if (!name || !name.trim()) return sendJson(res, 400, { error: 'Student name is required' });
+
+      const nameParts = name.trim().split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ') || 'Student';
+
+      const nextIndex = 100 + store.students.length + 1;
+      const studentCode = `CK-2026-${nextIndex}`;
+      const studentId = `STU-${nextIndex}`;
+      const parentId = `PAR-${nextIndex + 400}`;
+
+      // Create Parent Profile
+      store.parents.push({
+        id: parentId,
+        mobile: parent_mobile || `98765${nextIndex.toString().padStart(5, '0')}`,
+        password_hash: hashSecret('parent123'),
+        name: parent_name || 'Guardian',
+      });
+
+      // Create Student Profile
+      const student = {
+        id: studentId,
+        student_code: studentCode,
+        first_name: firstName,
+        last_name: lastName,
+        academic_year: academic_year || 'Grade 11 - MPC',
+        college_id: 'COL-001',
+        account_status: 'active',
+        password_hash: hashSecret(password || `PASS${nextIndex}`),
+        pin_hash: hashSecret(pin || '2026'),
+        parent_account_id: parentId,
+      };
+      store.students.push(student);
+
+      // Create Initial Wallet
+      const initialBalance = Number(initial_wallet_paise) || 0;
+      store.wallets.set(studentId, {
+        student_id: studentId,
+        balance_paise: initialBalance,
+        status: 'active',
+      });
+
+      // Default Spending Controls
+      store.spending_controls.set(studentId, {
+        daily_limit_paise: 50000,
+        single_txn_limit_paise: 25000,
+        allowed_categories: ['All', 'Stationery', 'Meals & Snacks', 'Beverages', 'Academic Tools', 'Uniform & Lab Kits'],
+        card_locked: false,
+      });
+
+      // Record initial funding transaction if positive
+      if (initialBalance > 0) {
+        store.transactions.unshift({
+          id: `TXN-${Date.now()}`,
+          wallet_id: `WLT-${studentId}`,
+          student_id: studentId,
+          type: 'CREDIT',
+          amount_paise: initialBalance,
+          balance_after_paise: initialBalance,
+          reference: `FND-INIT-${studentCode}`,
+          description: 'Enrollment Initial Balance',
+          created_at: new Date().toISOString(),
+        });
+      }
+
+      // Persist state immediately
+      saveStore(store, DATA_FILE);
+
+      return sendJson(res, 201, {
+        success: true,
+        student: {
+          id: student.id,
+          student_code: student.student_code,
+          name: `${student.first_name} ${student.last_name}`,
+          academic_year: student.academic_year,
+          account_status: student.account_status,
+          wallet_balance_paise: initialBalance,
+        },
+      });
+    }).catch((err) => sendJson(res, 400, { error: err.message }));
+    return;
+  }
+
+  // 17. Ops Toggle Student Account Status (Persisted)
+  if (pathname === '/api/ops/students/status' && method === 'POST') {
+    const token = getAuthHeader(req);
+    const session = token ? verifyToken(token) : null;
+    if (!session || session.role !== 'ops') {
+      return sendJson(res, 403, { error: 'Unauthorized: Operations staff access only' });
+    }
+
+    parseJsonBody(req).then((body) => {
+      const { student_id, status } = body;
+      const student = store.students.find((s) => s.id === student_id || s.student_code === student_id);
+      if (!student) return sendJson(res, 404, { error: 'Student not found' });
+
+      student.account_status = status || (student.account_status === 'active' ? 'inactive' : 'active');
+
+      // Persist state immediately
+      saveStore(store, DATA_FILE);
+
+      return sendJson(res, 200, {
+        success: true,
+        student_id: student.id,
+        student_code: student.student_code,
+        account_status: student.account_status,
+      });
+    }).catch((err) => sendJson(res, 400, { error: err.message }));
+    return;
+  }
+
+  // 18. Ops Create or Update Product Stock/Price (Persisted)
+  if (pathname === '/api/ops/products' && method === 'POST') {
+    const token = getAuthHeader(req);
+    const session = token ? verifyToken(token) : null;
+    if (!session || session.role !== 'ops') {
+      return sendJson(res, 403, { error: 'Unauthorized: Operations staff access only' });
+    }
+
+    parseJsonBody(req).then((body) => {
+      const { id, name, category, price_paise, stock_quantity, description, is_available } = body;
+      if (id) {
+        // Update product
+        const product = store.products.find((p) => p.id === id);
+        if (!product) return sendJson(res, 404, { error: 'Product not found' });
+        if (price_paise !== undefined) product.price_paise = price_paise;
+        if (stock_quantity !== undefined) product.stock_quantity = stock_quantity;
+        if (is_available !== undefined) product.is_available = is_available;
+        if (description !== undefined) product.description = description;
+
+        saveStore(store, DATA_FILE);
+        return sendJson(res, 200, { success: true, product });
+      }
+
+      // Create new product
+      const newProduct = {
+        id: `PRD-${Date.now().toString().slice(-4)}`,
+        college_id: 'COL-001',
+        name: name || 'New Item',
+        category: category || 'General',
+        price_paise: price_paise || 1000,
+        stock_quantity: stock_quantity || 10,
+        is_available: is_available !== undefined ? is_available : true,
+        image_url: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=300',
+        description: description || 'Campus store item',
+      };
+      store.products.push(newProduct);
+
+      saveStore(store, DATA_FILE);
+      return sendJson(res, 201, { success: true, product: newProduct });
+    }).catch((err) => sendJson(res, 400, { error: err.message }));
+    return;
+  }
+
+  // 19. Checkout (Atomic Order Placement with Idempotency & Persistence)
   if (pathname === '/api/checkout' && method === 'POST') {
     const token = getAuthHeader(req);
     const session = token ? verifyToken(token) : null;
@@ -846,6 +1120,11 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
       }
 
       const studentId = session.entityId;
+      const student = store.students.find((s) => s.id === studentId);
+      if (student && student.account_status !== 'active') {
+        return sendJson(res, 403, { error: `Account is ${student.account_status}. Orders blocked.` });
+      }
+
       const wallet = store.wallets.get(studentId);
       if (!wallet) return sendJson(res, 404, { error: 'Wallet not found' });
 
@@ -865,6 +1144,14 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
         if (product.stock_quantity < item.quantity) {
           return sendJson(res, 400, { error: `Insufficient stock for ${product.name}` });
         }
+
+        // Category restrictions check
+        if (controls && controls.allowed_categories && controls.allowed_categories.length > 0 && !controls.allowed_categories.includes('All')) {
+          if (!controls.allowed_categories.includes(product.category)) {
+            return sendJson(res, 403, { error: `Purchase of ${product.category} items is restricted by parent controls` });
+          }
+        }
+
         totalPaise += product.price_paise * item.quantity;
         orderItems.push({
           product_id: product.id,
@@ -877,6 +1164,16 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
       // Check single transaction limit
       if (controls && totalPaise > controls.single_txn_limit_paise) {
         return sendJson(res, 403, { error: 'Order exceeds single transaction limit' });
+      }
+
+      // Check daily limit
+      const todayDate = new Date().toISOString().slice(0, 10);
+      const todaySpentPaise = store.orders
+        .filter((o) => o.student_id === studentId && o.created_at.startsWith(todayDate) && o.payment_status === 'paid')
+        .reduce((acc, o) => acc + o.total_amount_paise, 0);
+
+      if (controls && todaySpentPaise + totalPaise > controls.daily_limit_paise) {
+        return sendJson(res, 403, { error: 'Order exceeds student daily spending limit' });
       }
 
       // Check balance
@@ -926,6 +1223,9 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
         created_at: new Date().toISOString(),
       });
 
+      // Persist state immediately to disk
+      saveStore(store, DATA_FILE);
+
       return sendJson(res, 200, {
         order_id: orderId,
         reference,
@@ -938,8 +1238,16 @@ export function handleRequest(req: http.IncomingMessage, res: http.ServerRespons
     return;
   }
 
-  // 17. Notifications Read
+  // 20. Notifications Read (Persisted)
   if (pathname === '/api/notifications/read' && method === 'POST') {
+    const token = getAuthHeader(req);
+    const session = token ? verifyToken(token) : null;
+    if (session && session.role === 'student') {
+      store.notifications
+        .filter((n) => n.student_id === session.entityId)
+        .forEach((n) => (n.is_read = true));
+      saveStore(store, DATA_FILE);
+    }
     return sendJson(res, 200, { ok: true });
   }
 
@@ -956,6 +1264,7 @@ if (process.argv[1] && process.argv[1].endsWith('server.ts')) {
   const server = createServer();
   server.listen(PORT, HOST, () => {
     console.log(`[CampusKart] Pure TypeScript Backend active on http://${HOST}:${PORT}`);
-    console.log(`[CampusKart] Database Provider: ${SUPABASE_URL ? 'Supabase' : 'In-Memory TypeScript Engine'}`);
+    console.log(`[CampusKart] Persistence Data File: ${DATA_FILE}`);
+    console.log(`[CampusKart] Database Provider: ${SUPABASE_URL ? 'Supabase' : 'File-Backed TypeScript Engine'}`);
   });
 }

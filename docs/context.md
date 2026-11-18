@@ -78,3 +78,55 @@ All 4 applications operate against an authoritative, synchronized relational led
 ```
 
 - Every order transition generates automated audit trail entries in `wallet_transactions` and broadcasts student/parent notifications.
+
+---
+
+## 5. Step-by-Step Student Data Handling & Persistence Protocol
+
+Because CampusKart manages sensitive institutional student financial records, every student interaction follows a deterministic, 7-step data lifecycle where state is strictly verified, loaded, and persisted at each step:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                 7-Step Student Data Lifecycle & Persistence                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+  [Step 1] Enrollment & Credential Ingestion
+     │       - Generate unique Student Code (CK-YYYY-NNN) & UUID
+     │       - PBKDF2 hash for password & 4-digit PIN
+     │       - Initialize Wallet in integer paise & emit Initial Credit ledger entry
+     │       - Persist immediately to disk / Supabase
+     ▼
+  [Step 2] Dual-Factor Authentication
+     │       - Factor 1: Student Code + Password -> Issue Pre-Auth Token (TTL: 5m)
+     │       - Factor 2: Pre-Auth Token + 4-digit PIN -> Issue HMAC-SHA256 Session Token
+     │       - Verify account status is 'active' (not suspended/inactive)
+     ▼
+  [Step 3] Session & Spending Controls Hydration
+     │       - Hydrate wallet balance (`balance_paise`), active orders, and notifications
+     │       - Load parent spending controls (daily limit, single txn limit, category locks, card lock)
+     │       - Persist session state in browser localStorage to survive reloads
+     ▼
+  [Step 4] Pre-Transaction Compliance Verification
+     │       - Verify student card is not locked (`card_locked === false`)
+     │       - Verify item categories against allowed categories list
+     │       - Verify single order amount <= `single_txn_limit_paise`
+     │       - Verify today's aggregate spend + order amount <= `daily_limit_paise`
+     │       - Verify available wallet balance >= order amount in integer paise
+     ▼
+  [Step 5] Atomic Checkout & Double-Entry Ledger Execution
+     │       - Check `idempotency_key` (return cached receipt on replay without duplicate charge)
+     │       - Atomically decrement product stock quantities
+     │       - Atomically debit student wallet balance in integer paise
+     │       - Insert new order record with status 'Order Placed'
+     │       - Insert immutable audit record into `wallet_transactions` ledger
+     ▼
+  [Step 6] Durable Storage Commitment (Zero Data Loss)
+     │       - Backend: Atomic write (`write -> fs.renameSync`) to persistent JSON database
+     │       - Cloud: Sync mutation to Supabase PostgreSQL with RLS
+     │       - Frontend: Synchronize updated balances and active order records in localStorage
+     ▼
+  [Step 7] Order Fulfillment Tracking & Parent Notifications
+             - Ops advances order: 'Order Placed' -> 'Preparing' -> 'Ready for Collection'
+             - Push notification issued to student & parent
+             - Every transition permanently recorded with timestamp & operator ID
+```
+

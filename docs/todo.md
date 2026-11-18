@@ -1,19 +1,34 @@
 # CampusKart — Future Roadmap & Things To Do
 
-A prioritized engineering task list for upcoming milestones on CampusKart.
+A prioritized engineering task list for upcoming milestones on CampusKart, tracking both completed foundational data persistence and upcoming institutional features.
+
+---
+
+## Completed Foundational Milestones
+
+- [x] **Durable Backend Data Persistence (`backend/server.ts`)**:
+  - Implemented file-backed atomic database storage (`campuskart_data.json`) via safe temp-file write + rename (`fs.renameSync`).
+  - Ensures all student profiles, wallets, transactions, spending limits, orders, and products are permanently saved and loaded on each step across server restarts.
+- [x] **Frontend Session & Cart Hydration (`CampusKartContext.tsx`)**:
+  - Persists student and parent login state, active portal screen, selected student ID, and shopping cart in `localStorage`.
+  - Browser page reloads preserve active session, preventing unintended logouts or cart resets.
+- [x] **Step-by-Step Student Lifecycle Enforcement**:
+  - Strict 7-step data handling: Enrollment -> 2-Step Auth -> Controls Hydration -> Pre-Order Compliance (category, single txn, daily limit, card lock, wallet balance) -> Atomic Checkout -> Immediate Persistence -> Order Tracking.
+- [x] **Durable Integration Test Suite (`backend/test_backend.ts`)**:
+  - Validates authentication, cross-portal transactions, and verifies cold-reload data persistence from disk.
 
 ---
 
 ## High Priority (Immediate Next Steps)
 
 - [ ] **Supabase Cloud Provisioning**:
-  - Once the user provides `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (or `DATABASE_URL`) in `.env`, run `schema_postgres_supabase.sql` to instantiate the production database.
-  - Test cross-portal transactional checkout and funding against live Supabase instance.
+  - Once user credentials are provided in `.env`, run `supabase/schema.sql` in Supabase SQL Editor.
+  - Verify live PostgREST and PostgreSQL connection pooling with Supabase client.
 - [ ] **API Endpoint Rate Limiting**:
   - Add in-memory sliding-window rate limiter for sensitive authentication endpoints (`/api/auth/login`, `/api/auth/verify-pin`, `/api/parent/auth/login`).
-  - Block automated brute-force attempts on 4-digit PINs.
-- [ ] **CORS Environment Configuration**:
-  - Replace wildcard `Access-Control-Allow-Origin: *` with explicit allowed origins read from `.env` (`ALLOWED_ORIGINS=http://localhost:5173,https://campuskart.app`).
+  - Block automated brute-force attempts on 4-digit PINs (lock out after 5 consecutive failed attempts).
+- [ ] **CORS Strict Domain Binding**:
+  - Read `ALLOWED_ORIGINS` from `.env` to restrict cross-origin requests to authorized institutional domains and dev ports (`http://localhost:5173`).
 
 ---
 
@@ -22,11 +37,11 @@ A prioritized engineering task list for upcoming milestones on CampusKart.
 - [ ] **Supabase Realtime Subscriptions**:
   - Connect the React frontend to Supabase Realtime channels to receive instant push events when Operations updates order statuses (`Preparing` -> `Ready for Collection`).
   - Eliminate all remaining polling mechanisms.
-- [ ] **Automated Integration & E2E Testing**:
-  - Set up Playwright or Cypress tests verifying full student purchase flow from Login -> Add to Cart -> 5s Simulated Payment -> Receipt.
+- [ ] **Automated End-to-End Testing**:
+  - Set up Playwright tests verifying full student purchase flow from Login -> Add to Cart -> 5s Simulated Payment -> Receipt.
   - Automate test runs in GitHub Actions CI/CD workflow.
 - [ ] **Structured Logging & APM**:
-  - Replace `console.log()` statements in `backend/server.ts` with structured JSON logging (e.g. `pino` or `winston` in TypeScript) including request ID, latency, user role, and status code.
+  - Replace `console.log()` statements in `backend/server.ts` with structured JSON logging (`pino` in TypeScript) including request ID, latency, user role, and status code.
 
 ---
 
