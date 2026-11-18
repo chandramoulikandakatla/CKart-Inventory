@@ -1,26 +1,43 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { INITIAL_STATE } from '../constants/initialState';
 import { ToastData } from '../components/common/ToastNotification';
+import {
+  EcosystemState,
+  Student,
+  Product,
+  Order,
+  SpendingControls,
+  WalletTransaction,
+  Notification,
+  FundingReceipt,
+  PopulatedCartItem,
+  LedgerMetrics,
+  PortalType,
+  StudentScreen,
+  ParentScreen,
+  OpsScreen,
+  CollegeScreen,
+} from '../types/ecosystem';
 
 export interface CampusKartContextType {
   // Ecosystem state
-  ecosystem: any;
-  setEcosystem: React.Dispatch<React.SetStateAction<any>>;
+  ecosystem: EcosystemState;
+  setEcosystem: React.Dispatch<React.SetStateAction<EcosystemState>>;
 
   // Portal & Shared overlays
-  activePortal: 'student' | 'parent' | 'ops' | 'college' | string;
-  setActivePortal: React.Dispatch<React.SetStateAction<any>>;
+  activePortal: PortalType | string;
+  setActivePortal: React.Dispatch<React.SetStateAction<PortalType | string>>;
   toast: ToastData | null;
   setToast: React.Dispatch<React.SetStateAction<ToastData | null>>;
   showToast: (title: string, message: string, type?: 'success' | 'error' | 'info' | string) => void;
   showDemoModal: boolean;
   setShowDemoModal: React.Dispatch<React.SetStateAction<boolean>>;
-  receiptModalOrder: any | null;
-  setReceiptModalOrder: React.Dispatch<React.SetStateAction<any | null>>;
+  receiptModalOrder: Order | null;
+  setReceiptModalOrder: React.Dispatch<React.SetStateAction<Order | null>>;
 
   // Student portal state
-  studentScreen: string;
-  setStudentScreen: React.Dispatch<React.SetStateAction<string>>;
+  studentScreen: StudentScreen | string;
+  setStudentScreen: React.Dispatch<React.SetStateAction<StudentScreen | string>>;
   loggedStudentId: string;
   setLoggedStudentId: React.Dispatch<React.SetStateAction<string>>;
   studentAuthed: boolean;
@@ -31,8 +48,8 @@ export interface CampusKartContextType {
   setCredPassInput: React.Dispatch<React.SetStateAction<string>>;
   credError: string;
   setCredError: React.Dispatch<React.SetStateAction<string>>;
-  pendingStudent: any;
-  setPendingStudent: React.Dispatch<React.SetStateAction<any>>;
+  pendingStudent: Student | null;
+  setPendingStudent: React.Dispatch<React.SetStateAction<Student | null>>;
   pinInput: string;
   setPinInput: React.Dispatch<React.SetStateAction<string>>;
   pinError: string;
@@ -71,16 +88,16 @@ export interface CampusKartContextType {
   setStudentPayStep: React.Dispatch<React.SetStateAction<number>>;
   studentPayErrorReason: string;
   setStudentPayErrorReason: React.Dispatch<React.SetStateAction<string>>;
-  lastConfirmedOrder: any | null;
-  setLastConfirmedOrder: React.Dispatch<React.SetStateAction<any | null>>;
+  lastConfirmedOrder: Order | null;
+  setLastConfirmedOrder: React.Dispatch<React.SetStateAction<Order | null>>;
   orderFilter: string;
   setOrderFilter: React.Dispatch<React.SetStateAction<string>>;
   trackingOrderId: string;
   setTrackingOrderId: React.Dispatch<React.SetStateAction<string>>;
 
   // Parent portal state
-  parentScreen: string;
-  setParentScreen: React.Dispatch<React.SetStateAction<string>>;
+  parentScreen: ParentScreen | string;
+  setParentScreen: React.Dispatch<React.SetStateAction<ParentScreen | string>>;
   parentAuthed: boolean;
   setParentAuthed: React.Dispatch<React.SetStateAction<boolean>>;
   parentLookupStudentId: string;
@@ -99,16 +116,16 @@ export interface CampusKartContextType {
   setFundingMethod: React.Dispatch<React.SetStateAction<string>>;
   parentPayStep: number;
   setParentPayStep: React.Dispatch<React.SetStateAction<number>>;
-  lastFundingReceipt: any | null;
-  setLastFundingReceipt: React.Dispatch<React.SetStateAction<any | null>>;
+  lastFundingReceipt: FundingReceipt | null;
+  setLastFundingReceipt: React.Dispatch<React.SetStateAction<FundingReceipt | null>>;
   parentTxnFilter: string;
   setParentTxnFilter: React.Dispatch<React.SetStateAction<string>>;
   parentDateRange: string;
   setParentDateRange: React.Dispatch<React.SetStateAction<string>>;
 
   // Operations portal state
-  opsScreen: string;
-  setOpsScreen: React.Dispatch<React.SetStateAction<string>>;
+  opsScreen: OpsScreen | string;
+  setOpsScreen: React.Dispatch<React.SetStateAction<OpsScreen | string>>;
   opsOrderFilter: string;
   setOpsOrderFilter: React.Dispatch<React.SetStateAction<string>>;
   newProductForm: {
@@ -121,7 +138,7 @@ export interface CampusKartContextType {
   };
   setNewProductForm: React.Dispatch<React.SetStateAction<any>>;
   editingProductId: string | null;
-  setEditingProductId: React.Dispatch<React.SetStateAction<any>>;
+  setEditingProductId: React.Dispatch<React.SetStateAction<string | null>>;
   manualAdjForm: {
     studentId: string;
     type: string;
@@ -139,36 +156,36 @@ export interface CampusKartContextType {
   setNewStudentForm: React.Dispatch<React.SetStateAction<any>>;
 
   // College portal state
-  collegeScreen: string;
-  setCollegeScreen: React.Dispatch<React.SetStateAction<string>>;
+  collegeScreen: CollegeScreen | string;
+  setCollegeScreen: React.Dispatch<React.SetStateAction<CollegeScreen | string>>;
 
   // Derived values
-  currentStudent: any;
-  parentLinkedStudent: any;
-  populatedCart: any[];
+  currentStudent: Student;
+  parentLinkedStudent: Student;
+  populatedCart: PopulatedCartItem[];
   cartItemCount: number;
   cartSubtotal: number;
   platformFee: number;
   cartFinalPayable: number;
-  studentOrders: any[];
-  studentTransactions: any[];
-  parentOrders: any[];
-  parentTransactions: any[];
-  parentControls: any;
-  studentControls: any;
-  studentMetrics: any;
-  parentMetrics: any;
+  studentOrders: Order[];
+  studentTransactions: WalletTransaction[];
+  parentOrders: Order[];
+  parentTransactions: WalletTransaction[];
+  parentControls: SpendingControls;
+  studentControls: SpendingControls;
+  studentMetrics: LedgerMetrics;
+  parentMetrics: LedgerMetrics;
   studentTodaySpend: number;
   parentCategoryChartData: Array<{ name: string; value: number }>;
   highestSpendCategory: string;
-  parentMonthlyChartData: any[];
-  parentDailyTrendData: any[];
+  parentMonthlyChartData: Array<{ month: string; funded: number; spent: number }>;
+  parentDailyTrendData: Array<{ day: string; amount: number; funded: number }>;
 
   // Handlers
   handleValidateStudentCredentials: (e?: React.FormEvent) => void;
   handleVerifyStudentPin: (e?: React.FormEvent) => void;
   handleOpenProductDetail: (productId: string) => void;
-  handleAddToCart: (product: any, qtyToAdd?: number) => void;
+  handleAddToCart: (product: Product, qtyToAdd?: number) => void;
   handleUpdateCartQty: (productId: string, delta: number) => void;
   handleRemoveFromCart: (productId: string) => void;
   handleRequestParentTopUp: () => void;
@@ -176,7 +193,7 @@ export interface CampusKartContextType {
   handleConfirmAndPay: () => void;
   handleParentLogin: (e?: React.FormEvent) => void;
   handleConfirmParentFunding: () => void;
-  handleSaveSpendingControls: (updatedControls: any) => void;
+  handleSaveSpendingControls: (updatedControls: SpendingControls) => void;
   handleOpsUpdateOrderStatus: (orderId: string, nextStatus: string) => void;
   handleOpsUpdateStock: (productId: string, newStock?: number, newPrice?: number, toggleActive?: boolean) => void;
   handleOpsCreateProduct: (e: React.FormEvent) => void;
@@ -190,7 +207,7 @@ const CampusKartContext = createContext<CampusKartContextType | null>(null);
 
 export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // Load or initialize shared ecosystem state
-  const [ecosystem, setEcosystem] = useState(() => {
+  const [ecosystem, setEcosystem] = useState<EcosystemState>(() => {
     try {
       const saved = localStorage.getItem('campuskart_ecosystem_v4_clean');
       if (saved) {
@@ -213,8 +230,8 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   }, [ecosystem]);
 
-  // Active Portal Switcher ('student' | 'parent' | 'ops' | 'college')
-  const [activePortal, setActivePortal] = useState<'student' | 'parent' | 'ops' | 'college' | string>('student');
+  // Active Portal Switcher
+  const [activePortal, setActivePortal] = useState<PortalType | string>('student');
 
   // Toast Notification System
   const [toast, setToast] = useState<ToastData | null>(null);
@@ -227,19 +244,19 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
     return () => clearTimeout(timer);
   }, [toast]);
 
-  // Support / Demo Guide Modal
+  // Modals
   const [showDemoModal, setShowDemoModal] = useState(false);
-  const [receiptModalOrder, setReceiptModalOrder] = useState<any | null>(null);
+  const [receiptModalOrder, setReceiptModalOrder] = useState<Order | null>(null);
 
   // Student state
-  const [studentScreen, setStudentScreen] = useState('welcome');
+  const [studentScreen, setStudentScreen] = useState<StudentScreen | string>('welcome');
   const [loggedStudentId, setLoggedStudentId] = useState('CK-2026-101');
   const [studentAuthed, setStudentAuthed] = useState(false);
 
   const [credIdInput, setCredIdInput] = useState('CK-2026-101');
   const [credPassInput, setCredPassInput] = useState('PASS101');
   const [credError, setCredError] = useState('');
-  const [pendingStudent, setPendingStudent] = useState<any>(null);
+  const [pendingStudent, setPendingStudent] = useState<Student | null>(null);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
   const [pinMasked, setPinMasked] = useState(true);
@@ -275,13 +292,13 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
   const [simulateFailureMode, setSimulateFailureMode] = useState(false);
   const [studentPayStep, setStudentPayStep] = useState(0);
   const [studentPayErrorReason, setStudentPayErrorReason] = useState('');
-  const [lastConfirmedOrder, setLastConfirmedOrder] = useState<any | null>(null);
+  const [lastConfirmedOrder, setLastConfirmedOrder] = useState<Order | null>(null);
 
   const [orderFilter, setOrderFilter] = useState('All Orders');
   const [trackingOrderId, setTrackingOrderId] = useState('ORD-2026-8803');
 
   // Parent state
-  const [parentScreen, setParentScreen] = useState('welcome');
+  const [parentScreen, setParentScreen] = useState<ParentScreen | string>('welcome');
   const [parentAuthed, setParentAuthed] = useState(false);
   const [parentLookupStudentId, setParentLookupStudentId] = useState('CK-2026-101');
   const [parentPinInput, setParentPinInput] = useState('9999');
@@ -292,13 +309,13 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
   const [customFundInput, setCustomFundInput] = useState('1000');
   const [fundingMethod, setFundingMethod] = useState('UPI');
   const [parentPayStep, setParentPayStep] = useState(0);
-  const [lastFundingReceipt, setLastFundingReceipt] = useState<any | null>(null);
+  const [lastFundingReceipt, setLastFundingReceipt] = useState<FundingReceipt | null>(null);
 
   const [parentTxnFilter, setParentTxnFilter] = useState('All');
   const [parentDateRange, setParentDateRange] = useState('All Time');
 
   // Operations state
-  const [opsScreen, setOpsScreen] = useState('overview');
+  const [opsScreen, setOpsScreen] = useState<OpsScreen | string>('overview');
   const [opsOrderFilter, setOpsOrderFilter] = useState('All');
   const [newProductForm, setNewProductForm] = useState({
     name: '',
@@ -324,27 +341,27 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
   });
 
   // College state
-  const [collegeScreen, setCollegeScreen] = useState('overview');
+  const [collegeScreen, setCollegeScreen] = useState<CollegeScreen | string>('overview');
 
   // Derived memos
   const currentStudent = useMemo(() => {
-    return ecosystem.students.find((s: any) => s.id === loggedStudentId) || ecosystem.students[0];
+    return ecosystem.students.find((s) => s.id === loggedStudentId) || ecosystem.students[0];
   }, [ecosystem.students, loggedStudentId]);
 
   const parentLinkedStudent = useMemo(() => {
-    return ecosystem.students.find((s: any) => s.id === linkedStudentId) || ecosystem.students[0];
+    return ecosystem.students.find((s) => s.id === linkedStudentId) || ecosystem.students[0];
   }, [ecosystem.students, linkedStudentId]);
 
-  const populatedCart = useMemo(() => {
+  const populatedCart: PopulatedCartItem[] = useMemo(() => {
     return cart.map(item => {
-      const product = ecosystem.products.find((p: any) => p.id === item.productId);
+      const product = ecosystem.products.find(p => p.id === item.productId);
       if (!product) return null;
       return {
         ...product,
         qty: item.qty,
         subtotal: product.price * item.qty
       };
-    }).filter(Boolean);
+    }).filter(Boolean) as PopulatedCartItem[];
   }, [cart, ecosystem.products]);
 
   const cartItemCount = useMemo(() => populatedCart.reduce((acc, i) => acc + i.qty, 0), [populatedCart]);
@@ -353,19 +370,19 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
   const cartFinalPayable = cartSubtotal + platformFee;
 
   const studentOrders = useMemo(() => {
-    return ecosystem.orders.filter((o: any) => o.studentId === currentStudent.id);
+    return ecosystem.orders.filter((o) => o.studentId === currentStudent.id);
   }, [ecosystem.orders, currentStudent.id]);
 
   const studentTransactions = useMemo(() => {
-    return ecosystem.transactions.filter((t: any) => t.studentId === currentStudent.id);
+    return ecosystem.transactions.filter((t) => t.studentId === currentStudent.id);
   }, [ecosystem.transactions, currentStudent.id]);
 
   const parentOrders = useMemo(() => {
-    return ecosystem.orders.filter((o: any) => o.studentId === parentLinkedStudent.id);
+    return ecosystem.orders.filter((o) => o.studentId === parentLinkedStudent.id);
   }, [ecosystem.orders, parentLinkedStudent.id]);
 
   const parentTransactions = useMemo(() => {
-    return ecosystem.transactions.filter((t: any) => t.studentId === parentLinkedStudent.id);
+    return ecosystem.transactions.filter((t) => t.studentId === parentLinkedStudent.id);
   }, [ecosystem.transactions, parentLinkedStudent.id]);
 
   const parentControls = useMemo(() => {
@@ -376,12 +393,12 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
     return ecosystem.spendingControls[currentStudent.id] || INITIAL_STATE.spendingControls["CK-2026-101"];
   }, [ecosystem.spendingControls, currentStudent.id]);
 
-  const calcLedgerMetrics = (txns: any[]) => {
+  const calcLedgerMetrics = (txns: WalletTransaction[]): LedgerMetrics => {
     let totalAdded = 0;
     let totalSpent = 0;
     let totalRefunds = 0;
     let purchaseCount = 0;
-    txns.forEach((t: any) => {
+    txns.forEach((t) => {
       if (t.type === 'Wallet Funding') totalAdded += t.amount;
       else if (t.type === 'Student Purchase') {
         totalSpent += Math.abs(t.amount);
@@ -406,8 +423,8 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const studentTodaySpend = useMemo(() => {
     return studentTransactions
-      .filter((t: any) => t.type === 'Student Purchase' && t.timestamp.startsWith('2026-11-16'))
-      .reduce((acc: number, t: any) => acc + Math.abs(t.amount), 0);
+      .filter((t) => t.type === 'Student Purchase' && t.timestamp.startsWith('2026-11-16'))
+      .reduce((acc, t) => acc + Math.abs(t.amount), 0);
   }, [studentTransactions]);
 
   const parentCategoryChartData = useMemo(() => {
@@ -419,9 +436,9 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
       'Academic Supplies': 0,
       'Other Services': 0
     };
-    parentOrders.forEach((ord: any) => {
+    parentOrders.forEach((ord) => {
       if (ord.status === 'Cancelled') return;
-      ord.items.forEach((it: any) => {
+      ord.items.forEach((it) => {
         const cat = it.category || 'Daily Essentials';
         map[cat] = (map[cat] || 0) + it.subtotal;
       });
@@ -460,7 +477,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
       { day: 'Nov 15', amount: 0, funded: 0 },
       { day: 'Nov 16', amount: 0, funded: 0 }
     ];
-    parentTransactions.forEach((t: any) => {
+    parentTransactions.forEach((t) => {
       const datePrefix = t.timestamp.slice(5, 10);
       const mapDay: Record<string, string> = {
         '11-10': 'Nov 10',
@@ -484,7 +501,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
     if (e) e.preventDefault();
     setCredError('');
     const trimmedId = credIdInput.trim().toUpperCase();
-    const student = ecosystem.students.find((s: any) => s.id.toUpperCase() === trimmedId);
+    const student = ecosystem.students.find((s) => s.id.toUpperCase() === trimmedId);
 
     if (!student) {
       setCredError('Student ID not found in CampusKart registry. Try CK-2026-101.');
@@ -530,7 +547,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
     setStudentScreen('product_detail');
   };
 
-  const handleAddToCart = (product: any, qtyToAdd = 1) => {
+  const handleAddToCart = (product: Product, qtyToAdd = 1) => {
     if (!product.active || product.stock <= 0) {
       showToast('Unavailable', `${product.name} is currently out of stock.`, 'error');
       return;
@@ -550,7 +567,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   const handleUpdateCartQty = (productId: string, delta: number) => {
-    const product = ecosystem.products.find((p: any) => p.id === productId);
+    const product = ecosystem.products.find(p => p.id === productId);
     if (!product) return;
     setCart(prev => prev.map(item => {
       if (item.productId !== productId) return item;
@@ -571,7 +588,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const handleRequestParentTopUp = () => {
     const shortfall = Math.max(0, cartFinalPayable - currentStudent.walletBalance);
-    const newNotif = {
+    const newNotif: Notification = {
       id: `NOTIF-${Date.now()}`,
       target: 'parent',
       studentId: currentStudent.id,
@@ -581,7 +598,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
       type: 'funding',
       read: false
     };
-    setEcosystem((prev: any) => ({
+    setEcosystem((prev) => ({
       ...prev,
       notifications: [newNotif, ...prev.notifications]
     }));
@@ -619,7 +636,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
     const blocker = checkOrderBlockers();
     if (blocker) {
       if (blocker.includes('Limit') || blocker.includes('restricted')) {
-        const limitNotif = {
+        const limitNotif: Notification = {
           id: `NOTIF-${Date.now()}`,
           target: 'parent',
           studentId: currentStudent.id,
@@ -629,7 +646,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
           type: 'alert',
           read: false
         };
-        setEcosystem((prev: any) => ({
+        setEcosystem((prev) => ({
           ...prev,
           notifications: [limitNotif, ...prev.notifications]
         }));
@@ -670,7 +687,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
       const newBal = newBalPaise / 100;
       const primaryCategory = populatedCart[0]?.category || 'Daily Essentials';
 
-      const newOrder = {
+      const newOrder: Order = {
         id: orderId,
         studentId: currentStudent.id,
         studentName: currentStudent.name,
@@ -695,7 +712,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
         remainingBalance: newBal
       };
 
-      const newTxn = {
+      const newTxn: WalletTransaction = {
         id: txnId,
         studentId: currentStudent.id,
         type: "Student Purchase",
@@ -712,7 +729,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
         reconciled: true
       };
 
-      const newNotifs = [
+      const newNotifs: Notification[] = [
         {
           id: `NOTIF-${Date.now()}-1`,
           target: 'both',
@@ -738,10 +755,10 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
         });
       }
 
-      setEcosystem((prev: any) => ({
+      setEcosystem((prev) => ({
         ...prev,
-        students: prev.students.map((s: any) => s.id === currentStudent.id ? { ...s, walletBalance: newBal } : s),
-        products: prev.products.map((p: any) => {
+        students: prev.students.map((s) => s.id === currentStudent.id ? { ...s, walletBalance: newBal } : s),
+        products: prev.products.map((p) => {
           const inCart = cart.find(c => c.productId === p.id);
           return inCart ? { ...p, stock: Math.max(0, p.stock - inCart.qty) } : p;
         }),
@@ -760,7 +777,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
   const handleParentLogin = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setParentAuthError('');
-    const student = ecosystem.students.find((s: any) => s.id.toUpperCase() === parentLookupStudentId.trim().toUpperCase());
+    const student = ecosystem.students.find((s) => s.id.toUpperCase() === parentLookupStudentId.trim().toUpperCase());
     if (!student) {
       setParentAuthError('Student CampusKart ID not found. Use CK-2026-101 or CK-2026-102.');
       return;
@@ -801,7 +818,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
       const prevBal = prevBalPaise / 100;
       const newBal = newBalPaise / 100;
 
-      const newTxn = {
+      const newTxn: WalletTransaction = {
         id: txnId,
         studentId: parentLinkedStudent.id,
         type: "Wallet Funding",
@@ -818,7 +835,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
         reconciled: true
       };
 
-      const newNotif = {
+      const newNotif: Notification = {
         id: `NOTIF-${Date.now()}`,
         target: 'both',
         studentId: parentLinkedStudent.id,
@@ -829,9 +846,9 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
         read: false
       };
 
-      setEcosystem((prev: any) => ({
+      setEcosystem((prev) => ({
         ...prev,
-        students: prev.students.map((s: any) => s.id === parentLinkedStudent.id ? { ...s, walletBalance: newBal } : s),
+        students: prev.students.map((s) => s.id === parentLinkedStudent.id ? { ...s, walletBalance: newBal } : s),
         transactions: [newTxn, ...prev.transactions],
         notifications: [newNotif, ...prev.notifications]
       }));
@@ -851,8 +868,8 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
     }, 5000);
   };
 
-  const handleSaveSpendingControls = (updatedControls: any) => {
-    setEcosystem((prev: any) => ({
+  const handleSaveSpendingControls = (updatedControls: SpendingControls) => {
+    setEcosystem((prev) => ({
       ...prev,
       spendingControls: {
         ...prev.spendingControls,
@@ -876,12 +893,12 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   const handleOpsUpdateOrderStatus = (orderId: string, nextStatus: string) => {
-    const targetOrder = ecosystem.orders.find((o: any) => o.id === orderId);
+    const targetOrder = ecosystem.orders.find((o) => o.id === orderId);
     if (!targetOrder) return;
 
-    setEcosystem((prev: any) => ({
+    setEcosystem((prev) => ({
       ...prev,
-      orders: prev.orders.map((o: any) => o.id === orderId ? { ...o, status: nextStatus } : o),
+      orders: prev.orders.map((o) => o.id === orderId ? { ...o, status: nextStatus } : o),
       notifications: [
         {
           id: `NOTIF-${Date.now()}`,
@@ -900,9 +917,9 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   const handleOpsUpdateStock = (productId: string, newStock?: number, newPrice?: number, toggleActive?: boolean) => {
-    setEcosystem((prev: any) => ({
+    setEcosystem((prev) => ({
       ...prev,
-      products: prev.products.map((p: any) => {
+      products: prev.products.map((p) => {
         if (p.id !== productId) return p;
         return {
           ...p,
@@ -922,7 +939,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
       return;
     }
     const newId = `PRD-0${ecosystem.products.length + 1}`;
-    const prod = {
+    const prod: Product = {
       id: newId,
       name: newProductForm.name.trim(),
       category: newProductForm.category,
@@ -934,7 +951,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
       offerTag: newProductForm.offerTag || 'Campus Special',
       description: newProductForm.description.trim() || 'Approved institutional campus product.'
     };
-    setEcosystem((prev: any) => ({
+    setEcosystem((prev) => ({
       ...prev,
       products: [prod, ...prev.products]
     }));
@@ -943,11 +960,11 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   const handleOpsToggleStudentStatus = (studentId: string) => {
-    setEcosystem((prev: any) => ({
+    setEcosystem((prev) => ({
       ...prev,
-      students: prev.students.map((s: any) => {
+      students: prev.students.map((s) => {
         if (s.id !== studentId) return s;
-        const next = s.status === 'Active' ? 'Inactive' : 'Active';
+        const next: 'Active' | 'Inactive' = s.status === 'Active' ? 'Inactive' : 'Active';
         return { ...s, status: next };
       })
     }));
@@ -965,7 +982,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
     const initBal = Math.max(0, Number(newStudentForm.initialWallet) || 0);
     const nowStr = "2026-11-16 " + new Date().toTimeString().slice(0, 5);
 
-    const newStu = {
+    const newStu: Student = {
       id: newId,
       name: newStudentForm.name.trim(),
       firstName: newStudentForm.name.trim().split(' ')[0],
@@ -982,7 +999,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
       notificationsPref: { sms: true, app: true, lowBalance: true }
     };
 
-    const newTxns = initBal > 0 ? [{
+    const newTxns: WalletTransaction[] = initBal > 0 ? [{
       id: `TXN-CK-${Math.floor(90500 + Math.random() * 400)}`,
       studentId: newId,
       type: "Wallet Funding",
@@ -999,7 +1016,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
       reconciled: true
     }] : [];
 
-    setEcosystem((prev: any) => ({
+    setEcosystem((prev) => ({
       ...prev,
       students: [...prev.students, newStu],
       spendingControls: {
@@ -1026,7 +1043,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const handleOpsManualAdjustment = (e: React.FormEvent) => {
     e.preventDefault();
-    const stu = ecosystem.students.find((s: any) => s.id === manualAdjForm.studentId);
+    const stu = ecosystem.students.find((s) => s.id === manualAdjForm.studentId);
     if (!stu) return;
     const rawAmt = Number(manualAdjForm.amount);
     if (!rawAmt || !manualAdjForm.reason.trim()) {
@@ -1044,7 +1061,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
     const nowStr = "2026-11-16 " + new Date().toTimeString().slice(0, 5);
     const txnId = `TXN-ADJ-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    const newTxn = {
+    const newTxn: WalletTransaction = {
       id: txnId,
       studentId: stu.id,
       type: manualAdjForm.type,
@@ -1061,9 +1078,9 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
       reconciled: true
     };
 
-    setEcosystem((prev: any) => ({
+    setEcosystem((prev) => ({
       ...prev,
-      students: prev.students.map((s: any) => s.id === stu.id ? { ...s, walletBalance: nextBal } : s),
+      students: prev.students.map((s) => s.id === stu.id ? { ...s, walletBalance: nextBal } : s),
       transactions: [newTxn, ...prev.transactions],
       notifications: [
         {

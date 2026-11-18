@@ -1,4 +1,6 @@
-export const INITIAL_STATE = {
+import { EcosystemState } from '../types/ecosystem';
+
+export const INITIAL_STATE: EcosystemState = {
   college: {
     name: "Sri Chaitanya & Narayana Junior Academy",
     code: "SCNA-HYD-01",
@@ -68,7 +70,7 @@ export const INITIAL_STATE = {
       weeklyLimit: 2000,
       monthlyLimitEnabled: true,
       monthlyLimit: 5000,
-      restrictedCategories: [] as string[],
+      restrictedCategories: [],
       lowBalanceAlertEnabled: true,
       lowBalanceThreshold: 200,
       instantTxnNotification: true,
@@ -81,7 +83,7 @@ export const INITIAL_STATE = {
       weeklyLimit: 1500,
       monthlyLimitEnabled: true,
       monthlyLimit: 3500,
-      restrictedCategories: [] as string[],
+      restrictedCategories: [],
       lowBalanceAlertEnabled: true,
       lowBalanceThreshold: 150,
       instantTxnNotification: true,
@@ -94,7 +96,7 @@ export const INITIAL_STATE = {
       weeklyLimit: 1500,
       monthlyLimitEnabled: false,
       monthlyLimit: 3000,
-      restrictedCategories: [] as string[],
+      restrictedCategories: [],
       lowBalanceAlertEnabled: true,
       lowBalanceThreshold: 100,
       instantTxnNotification: true,
@@ -247,9 +249,9 @@ export const INITIAL_STATE = {
       description: "15-garment automated wash, steam press, and neatly folded package pickup token."
     }
   ],
-  orders: [] as any[],
-  transactions: [] as any[],
-  notifications: [] as any[]
+  orders: [],
+  transactions: [],
+  notifications: []
 };
 
 export const ORDER_STATUS_STEPS = [

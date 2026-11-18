@@ -1,15 +1,17 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, Suspense, lazy } from 'react';
 import { CampusKartProvider, useCampusKart } from './context/CampusKartContext';
 import ShaderBackground from './components/common/ShaderBackground';
 import ToastNotification from './components/common/ToastNotification';
 import ReceiptModal from './components/common/ReceiptModal';
 import EvaluatorModal from './components/common/EvaluatorModal';
 import EvaluatorBar from './components/common/EvaluatorBar';
+import LoadingSpinner from './components/common/LoadingSpinner';
 
-import StudentPortal from './pages/student/StudentPortal';
-import ParentPortal from './pages/parent/ParentPortal';
-import OpsPortal from './pages/ops/OpsPortal';
-import CollegePortal from './pages/college/CollegePortal';
+// Dynamic code-splitting for portal bundles
+const StudentPortal = lazy(() => import('./pages/student/StudentPortal'));
+const ParentPortal = lazy(() => import('./pages/parent/ParentPortal'));
+const OpsPortal = lazy(() => import('./pages/ops/OpsPortal'));
+const CollegePortal = lazy(() => import('./pages/college/CollegePortal'));
 
 function AppContent() {
   const {
@@ -67,11 +69,13 @@ function AppContent() {
         onOpenDemoModal={() => setShowDemoModal(true)}
       />
 
-      {/* Active Portal Views */}
-      {activePortal === 'student' && <StudentPortal />}
-      {activePortal === 'parent' && <ParentPortal />}
-      {activePortal === 'ops' && <OpsPortal />}
-      {activePortal === 'college' && <CollegePortal />}
+      {/* Dynamic Lazy-Loaded Portal Views with Suspense */}
+      <Suspense fallback={<LoadingSpinner message={`Loading ${activePortal} portal...`} />}>
+        {activePortal === 'student' && <StudentPortal />}
+        {activePortal === 'parent' && <ParentPortal />}
+        {activePortal === 'ops' && <OpsPortal />}
+        {activePortal === 'college' && <CollegePortal />}
+      </Suspense>
     </div>
   );
 }

@@ -1,0 +1,3 @@
+# CampusKart Backend Dependencies
+# Built using Python Standard Library (http.server, sqlite3, hashlib, hmac)
+# Python 3.10+ required. Zero external dependencies needed.
