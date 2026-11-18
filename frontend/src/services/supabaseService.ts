@@ -38,6 +38,7 @@ export const supabaseService = {
       featured: item.stock_quantity > 20,
       offerTag: item.stock_quantity <= 10 ? 'Low Stock' : undefined,
       description: item.description || '',
+      imageUrl: item.image_url,
     }));
   },
 
