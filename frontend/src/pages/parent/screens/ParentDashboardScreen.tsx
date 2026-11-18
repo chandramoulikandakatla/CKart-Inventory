@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Wallet, Activity, PlusCircle
+  Wallet, Activity, PlusCircle, LogOut, ShieldCheck, CheckCircle
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -12,8 +12,7 @@ export const ParentDashboardScreen: React.FC = () => {
     ecosystem,
     setReceiptModalOrder,
     setParentScreen,
-    linkedStudentId,
-    setLinkedStudentId,
+    handleParentLogout,
     parentLinkedStudent,
     parentOrders,
     parentControls,
@@ -26,20 +25,23 @@ export const ParentDashboardScreen: React.FC = () => {
             <div className="space-y-6">
               {/* Top Linked Student Financial Banner */}
               <div className="bg-gradient-to-r from-white via-cyan-50/85 to-sky-50/80 border border-cyan-300/80 rounded-3xl p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-5 shadow-2xl">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono uppercase bg-emerald-500/20 text-sky-800 border border-cyan-300/80">
-                      Guardian Account: {parentLinkedStudent.parentName}
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono uppercase bg-emerald-500/20 text-sky-800 border border-cyan-300/80 flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                      Guardian: {parentLinkedStudent.parentName}
                     </span>
-                    <select
-                      value={linkedStudentId}
-                      onChange={(e) => setLinkedStudentId(e.target.value)}
-                      className="bg-[#F4EFEA] border border-stone-200/90 rounded-lg px-2 py-0.5 text-xs text-sky-800 font-mono"
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-sky-500/15 text-sky-900 border border-sky-300/80 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3 text-sky-600" />
+                      Linked Student: <strong>{parentLinkedStudent.name}</strong> ({parentLinkedStudent.id})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleParentLogout}
+                      className="px-2.5 py-0.5 rounded-full text-[10px] bg-rose-500/15 hover:bg-rose-500/25 text-rose-700 border border-rose-300/70 flex items-center gap-1 transition-all"
                     >
-                      {ecosystem.students.map(s => (
-                        <option key={s.id} value={s.id}>Linked Student: {s.name} ({s.id})</option>
-                      ))}
-                    </select>
+                      <LogOut className="w-2.5 h-2.5" /> Switch Student / Logout
+                    </button>
                   </div>
                   <h1 className="text-2xl font-extrabold text-[#2C1A12]">
                     {parentLinkedStudent.name} — Financial Activity Overview

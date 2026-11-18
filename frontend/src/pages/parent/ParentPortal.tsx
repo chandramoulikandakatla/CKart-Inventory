@@ -24,6 +24,8 @@ export const ParentPortal: React.FC = () => {
     setParentAuthed,
     ecosystem,
     parentLinkedStudent,
+    handleParentLogout,
+    showToast,
   } = useCampusKart();
 
   return (
@@ -70,11 +72,29 @@ export const ParentPortal: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {parentAuthed && (
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="text-[11px] font-mono text-sky-900 bg-sky-100/80 px-2.5 py-1 rounded-lg border border-sky-300/80">
+                {parentLinkedStudent.parentName} ({parentLinkedStudent.firstName}'s Guardian)
+              </span>
+              <button
+                type="button"
+                onClick={handleParentLogout}
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all"
+              >
+                Sign Out
+              </button>
+            </div>
+          )}
           <select
             value={parentScreen}
             onChange={(e) => {
               const val = e.target.value;
-              if (!['welcome', 'login'].includes(val)) setParentAuthed(true);
+              if (!parentAuthed && !['welcome', 'login'].includes(val)) {
+                setParentScreen('login');
+                showToast('Authentication Required', 'Please verify your Parent Access PIN to open guardian controls.', 'info');
+                return;
+              }
               setParentScreen(val);
             }}
             className="bg-[#F4EFEA] border border-cyan-300/80 rounded-xl px-2.5 py-1.5 text-xs text-[#3D251A]"

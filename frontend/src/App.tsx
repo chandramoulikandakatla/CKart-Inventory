@@ -25,6 +25,7 @@ function AppContent() {
     receiptModalOrder,
     setReceiptModalOrder,
     currentStudent,
+    parentLinkedStudent,
     ecosystem,
     handleResetDemoData,
   } = useCampusKart();
@@ -62,6 +63,7 @@ function AppContent() {
       {/* Top Ecosystem Switcher Bar */}
       <EvaluatorBar
         currentStudent={currentStudent}
+        parentLinkedStudent={parentLinkedStudent}
         totalOrdersCount={ecosystem.orders.length}
         activePortal={activePortal}
         pendingOpsOrdersCount={pendingOpsOrdersCount}

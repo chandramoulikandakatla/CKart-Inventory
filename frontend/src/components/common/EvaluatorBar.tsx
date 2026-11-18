@@ -6,6 +6,11 @@ interface EvaluatorBarProps {
     firstName: string;
     walletBalance: number;
   };
+  parentLinkedStudent?: {
+    firstName: string;
+    parentName: string;
+    walletBalance: number;
+  };
   totalOrdersCount: number;
   activePortal: 'student' | 'parent' | 'ops' | 'college' | string;
   pendingOpsOrdersCount: number;
@@ -15,6 +20,7 @@ interface EvaluatorBarProps {
 
 export const EvaluatorBar: React.FC<EvaluatorBarProps> = ({
   currentStudent,
+  parentLinkedStudent,
   totalOrdersCount,
   activePortal,
   pendingOpsOrdersCount,
@@ -39,11 +45,20 @@ export const EvaluatorBar: React.FC<EvaluatorBarProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-stone-500 hidden sm:block">
-              Active Student Wallet ({currentStudent.firstName}):{' '}
-              <strong className="text-[#2C1A12]">
-                ₹{currentStudent.walletBalance.toLocaleString('en-IN')}
-              </strong>{' '}
-              · Orders: <strong className="text-[#2C1A12]">{totalOrdersCount}</strong>
+              {activePortal === 'parent' && parentLinkedStudent ? (
+                <>
+                  Guardian View ({parentLinkedStudent.parentName}): Child <strong>{parentLinkedStudent.firstName}</strong> · Wallet:{' '}
+                  <strong className="text-emerald-700">₹{parentLinkedStudent.walletBalance.toLocaleString('en-IN')}</strong>
+                </>
+              ) : (
+                <>
+                  Active Student Wallet ({currentStudent.firstName}):{' '}
+                  <strong className="text-[#2C1A12]">
+                    ₹{currentStudent.walletBalance.toLocaleString('en-IN')}
+                  </strong>{' '}
+                  · Orders: <strong className="text-[#2C1A12]">{totalOrdersCount}</strong>
+                </>
+              )}
             </p>
           </div>
         </div>

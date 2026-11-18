@@ -65,19 +65,38 @@ export const authService = {
     return { status: 200, data: { session_token: sessionToken } };
   },
 
-  parentLogin(body: { mobile?: string; password?: string }) {
-    const { mobile, password } = body;
-    const parent = store.parents.find((p) => p.mobile === mobile);
-    if (!parent || !password || !verifySecret(password, parent.password_hash)) {
-      return { status: 401, error: 'Invalid parent mobile or password' };
+  parentLogin(body: { mobile?: string; password?: string; student_code?: string; pin?: string }) {
+    const { mobile, password, student_code, pin } = body;
+    const credSecret = password || pin;
+
+    let parent = null;
+    let linkedStudent = null;
+
+    if (student_code) {
+      linkedStudent = store.students.find(
+        (s) => s.student_code.toUpperCase() === student_code.trim().toUpperCase()
+      );
+      if (linkedStudent) {
+        parent = store.parents.find((p) => p.id === linkedStudent.parent_account_id);
+      }
+    } else if (mobile) {
+      const cleanMobile = mobile.replace(/\D/g, '');
+      parent = store.parents.find((p) => p.mobile === cleanMobile || p.mobile === mobile);
+      if (parent) {
+        linkedStudent = store.students.find((s) => s.parent_account_id === parent.id);
+      }
     }
 
-    const linkedStudent = store.students.find((s) => s.parent_account_id === parent.id);
+    if (!parent || !credSecret || !verifySecret(credSecret, parent.password_hash)) {
+      return { status: 401, error: 'Invalid parent credentials or access PIN' };
+    }
+
     const sessionToken = generateToken('parent', parent.id, { linkedStudentId: linkedStudent?.id });
     return {
       status: 200,
       data: {
         session_token: sessionToken,
+        parent_name: parent.name,
         linked_student: linkedStudent
           ? { id: linkedStudent.student_code, name: `${linkedStudent.first_name} ${linkedStudent.last_name}` }
           : null,

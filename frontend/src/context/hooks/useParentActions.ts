@@ -52,21 +52,41 @@ export function useParentActions(params: ParentActionParams) {
   const handleParentLogin = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setParentAuthError('');
-    const student = ecosystem.students.find(
-      (s) => s.id.toUpperCase() === parentLookupStudentId.trim().toUpperCase()
-    );
+    const query = parentLookupStudentId.trim().toUpperCase();
+    const cleanPhone = parentLookupStudentId.replace(/\D/g, '');
+
+    const student = ecosystem.students.find((s) => {
+      const sId = s.id.toUpperCase();
+      const sParentPhone = (s.parentPhone || '').replace(/\D/g, '');
+      const sParentName = (s.parentName || '').toUpperCase();
+      const sName = s.name.toUpperCase();
+      return (
+        sId === query ||
+        (cleanPhone.length >= 5 && sParentPhone.includes(cleanPhone)) ||
+        sParentName.includes(query) ||
+        sName.includes(query)
+      );
+    });
+
     if (!student) {
-      setParentAuthError('Student CampusKart ID not found. Use CK-2026-101 or CK-2026-102.');
+      setParentAuthError('Student or Guardian record not found. Valid IDs: CK-2026-101, CK-2026-102, or CK-2026-103.');
       return;
     }
     if (student.parentPin !== parentPinInput.trim()) {
-      setParentAuthError(`Invalid Parent Access PIN for ${student.parentName}. Demo PIN is ${student.parentPin}.`);
+      setParentAuthError(`Invalid Parent PIN for ${student.parentName} (${student.name}'s Guardian). Demo PIN is ${student.parentPin}.`);
       return;
     }
+
     setLinkedStudentId(student.id);
     setParentAuthed(true);
     setParentScreen('dashboard');
-    showToast('Parent Portal Unlocked', `Linked to ${student.name} (${student.id})`, 'success');
+    showToast('Parent Portal Unlocked', `Verified Guardian: ${student.parentName} linked strictly to ${student.name} (${student.id})`, 'success');
+  };
+
+  const handleParentLogout = () => {
+    setParentAuthed(false);
+    setParentScreen('login');
+    showToast('Parent Logged Out', 'Guardian session terminated safely.', 'info');
   };
 
   const handleConfirmParentFunding = () => {
@@ -191,6 +211,7 @@ export function useParentActions(params: ParentActionParams) {
 
   return {
     handleParentLogin,
+    handleParentLogout,
     handleConfirmParentFunding,
     handleSaveSpendingControls,
   };

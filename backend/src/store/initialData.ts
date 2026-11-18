@@ -37,16 +37,40 @@ export function createInitialStore(): BackendStore {
         college_id: 'COL-001',
         account_status: 'active',
         password_hash: hashSecret('PASS102'),
-        pin_hash: hashSecret('1234'),
+        pin_hash: hashSecret('5678'),
         parent_account_id: 'PAR-502',
+      },
+      {
+        id: 'STU-103',
+        student_code: 'CK-2026-103',
+        first_name: 'Rohan',
+        last_name: 'Verma',
+        academic_year: 'Grade 11 - MPC',
+        college_id: 'COL-001',
+        account_status: 'active',
+        password_hash: hashSecret('PASS103'),
+        pin_hash: hashSecret('4321'),
+        parent_account_id: 'PAR-503',
       },
     ],
     parents: [
       {
         id: 'PAR-501',
-        mobile: '9876543210',
-        password_hash: hashSecret('parent123'),
+        mobile: '9848022334',
+        password_hash: hashSecret('9999'),
         name: 'Rajesh Sharma',
+      },
+      {
+        id: 'PAR-502',
+        mobile: '9440177889',
+        password_hash: hashSecret('8888'),
+        name: 'Lakshmi Reddy',
+      },
+      {
+        id: 'PAR-503',
+        mobile: '9848055667',
+        password_hash: hashSecret('7777'),
+        name: 'Vikram Verma',
       },
     ],
     staff: [
@@ -66,8 +90,9 @@ export function createInitialStore(): BackendStore {
       },
     ],
     wallets: new Map([
-      ['STU-101', { student_id: 'STU-101', balance_paise: 85000, status: 'active' }],
-      ['STU-102', { student_id: 'STU-102', balance_paise: 120000, status: 'active' }],
+      ['STU-101', { student_id: 'STU-101', balance_paise: 0, status: 'active' }],
+      ['STU-102', { student_id: 'STU-102', balance_paise: 0, status: 'active' }],
+      ['STU-103', { student_id: 'STU-103', balance_paise: 0, status: 'active' }],
     ]),
     products: [
         {

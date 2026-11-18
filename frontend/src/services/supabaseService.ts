@@ -59,7 +59,8 @@ export const supabaseService = {
       const mappedStudents: Student[] = INITIAL_STATE.students.map((seedStu) => {
         const found = (dbStudents || []).find((s: any) => s.student_code === seedStu.id);
         const w = found?.wallets;
-        const balancePaise = w ? Number(w.balance_paise || 0) : 0;
+        const wObj = Array.isArray(w) ? w[0] : w;
+        const balancePaise = wObj ? Number(wObj.balance_paise || 0) : 0;
         return {
           ...seedStu,
           walletBalance: Math.round(balancePaise / 100),
@@ -69,7 +70,8 @@ export const supabaseService = {
       // Map spending controls
       const mappedControls: Record<string, SpendingControls> = { ...INITIAL_STATE.spendingControls };
       for (const s of dbStudents || []) {
-        const c = s.spending_controls;
+        const cRaw = s.spending_controls;
+        const c = Array.isArray(cRaw) ? cRaw[0] : cRaw;
         if (c && s.student_code) {
           mappedControls[s.student_code] = {
             dailyLimitEnabled: Boolean(c.daily_limit_paise),

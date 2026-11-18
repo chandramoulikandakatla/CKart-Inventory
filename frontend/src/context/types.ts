@@ -194,6 +194,7 @@ export interface CampusKartContextType {
   checkOrderBlockers: () => string | null;
   handleConfirmAndPay: () => void;
   handleParentLogin: (e?: React.FormEvent) => void;
+  handleParentLogout: () => void;
   handleConfirmParentFunding: () => void;
   handleSaveSpendingControls: (updatedControls: SpendingControls) => void;
   handleOpsUpdateOrderStatus: (orderId: string, nextStatus: string) => void;
