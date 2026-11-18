@@ -48,4 +48,6 @@ pnpm-debug.log*
 lerna-debug.log*
 
 
+# Agent documentation and context
+docs/
 docs
