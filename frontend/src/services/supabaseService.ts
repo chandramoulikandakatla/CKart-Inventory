@@ -1,6 +1,7 @@
 /**
  * CampusKart Supabase Service
- * Direct typed interactions with Supabase PostgreSQL tables using integer paise.
+ * Direct typed interactions with Supabase PostgreSQL tables and atomic RPC functions using integer paise.
+ * No standalone Node/Python server required!
  */
 
 import { supabase, isSupabaseConfigured } from './supabaseClient';
@@ -47,7 +48,7 @@ export const supabaseService = {
     if (!isSupabaseConfigured()) return null;
     const { data: student, error: studentError } = await supabase
       .from('students')
-      .select('*, colleges(name, institution_code)')
+      .select('*, colleges(id, name, institution_code)')
       .eq('student_code', studentCode)
       .single();
 
@@ -77,7 +78,8 @@ export const supabaseService = {
   },
 
   /**
-   * Record checkout order and decrease stock in Supabase
+   * Record checkout order and decrease stock in Supabase.
+   * Uses atomic PostgreSQL RPC `process_checkout` with fallback to direct table inserts.
    */
   async submitOrder(orderData: {
     studentId: string;
@@ -87,10 +89,32 @@ export const supabaseService = {
     fulfilmentMethod: string;
     collectionPoint: string;
     idempotencyKey: string;
-  }): Promise<{ orderId: string; reference: string } | null> {
+  }): Promise<{ orderId: string; reference: string; newBalancePaise?: number } | null> {
     if (!isSupabaseConfigured()) return null;
 
-    // Insert order record
+    // 1. Try atomic PostgreSQL RPC first
+    try {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('process_checkout', {
+        p_student_id: orderData.studentId,
+        p_college_id: orderData.collegeId,
+        p_items: orderData.items.map((i) => ({ product_id: i.productId, quantity: i.qty })),
+        p_fulfilment_method: orderData.fulfilmentMethod,
+        p_collection_point: orderData.collectionPoint,
+        p_idempotency_key: orderData.idempotencyKey,
+      });
+
+      if (!rpcError && rpcData) {
+        return {
+          orderId: rpcData.order_id,
+          reference: rpcData.reference,
+          newBalancePaise: rpcData.new_balance_paise,
+        };
+      }
+    } catch {
+      // Fall through to manual table insert if RPC is not provisioned
+    }
+
+    // 2. Direct table insert fallback
     const reference = `ORD-${Date.now().toString().slice(-4)}`;
     const { data: order, error } = await supabase
       .from('orders')
@@ -155,12 +179,24 @@ export const supabaseService = {
   },
 
   /**
-   * Top up wallet
+   * Top up wallet using atomic RPC or table update
    */
   async topUpWallet(studentId: string, amountPaise: number, method: string): Promise<boolean> {
     if (!isSupabaseConfigured()) return false;
 
-    // Fetch current wallet
+    // 1. Try atomic PostgreSQL RPC
+    try {
+      const { data, error } = await supabase.rpc('fund_student_wallet', {
+        p_student_id: studentId,
+        p_amount_paise: amountPaise,
+        p_method: method,
+      });
+      if (!error && data?.success) return true;
+    } catch {
+      // Fall through to manual table update
+    }
+
+    // 2. Fetch current wallet
     const { data: wallet, error } = await supabase
       .from('wallets')
       .select('id, balance_paise')
@@ -178,6 +214,7 @@ export const supabaseService = {
     // Record wallet transaction
     await supabase.from('wallet_transactions').insert({
       wallet_id: wallet.id,
+      student_id: studentId,
       transaction_type: 'CREDIT',
       amount_paise: amountPaise,
       balance_after_paise: newBalance,
