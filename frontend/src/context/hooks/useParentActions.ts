@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { supabaseService } from '../../services/supabaseService';
 import type {
   EcosystemState,
   Student,
@@ -130,6 +131,18 @@ export function useParentActions(params: ParentActionParams) {
         notifications: [newNotif, ...prev.notifications],
       }));
 
+      // Synchronize live with Supabase
+      if (supabaseService.isAvailable()) {
+        supabaseService.topUpWallet(parentLinkedStudent.id, amt, fundingMethod).then((dbBal) => {
+          if (dbBal !== null) {
+            setEcosystem((prev) => ({
+              ...prev,
+              students: prev.students.map((s) => (s.id === parentLinkedStudent.id ? { ...s, walletBalance: dbBal } : s)),
+            }));
+          }
+        });
+      }
+
       setLastFundingReceipt({
         txnId,
         studentName: parentLinkedStudent.name,
@@ -168,6 +181,11 @@ export function useParentActions(params: ParentActionParams) {
         ...prev.notifications,
       ],
     }));
+
+    if (supabaseService.isAvailable()) {
+      supabaseService.updateSpendingControls(parentLinkedStudent.id, updatedControls);
+    }
+
     showToast('Controls Saved', 'Spending limits and category rules are now enforced in real time.', 'success');
   };
 

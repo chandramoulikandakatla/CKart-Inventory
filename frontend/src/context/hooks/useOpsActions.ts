@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { supabaseService } from '../../services/supabaseService';
 import type {
   EcosystemState,
   Product,
@@ -73,6 +74,11 @@ export function useOpsActions(params: OpsActionParams) {
         ...prev.notifications,
       ],
     }));
+
+    if (supabaseService.isAvailable()) {
+      supabaseService.updateOrderStatus(orderId, nextStatus);
+    }
+
     showToast('Order Status Updated', `${orderId} moved to "${nextStatus}". Student & Parent views synced.`, 'success');
   };
 
@@ -94,6 +100,12 @@ export function useOpsActions(params: OpsActionParams) {
         };
       }),
     }));
+
+    if (supabaseService.isAvailable() && newStock !== undefined) {
+      const p = ecosystem.products.find((prod) => prod.id === productId);
+      supabaseService.updateProductStock(productId, p?.name || '', Math.max(0, Number(newStock)));
+    }
+
     showToast('Catalogue Updated', `Product ${productId} inventory synced with Student Shop.`, 'success');
   };
 

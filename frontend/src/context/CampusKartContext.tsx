@@ -113,19 +113,27 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
   const [activeIdempotencyKey, setActiveIdempotencyKey] = useState('');
   const [backendConnected, setBackendConnected] = useState(false);
 
-  // Health and Supabase connectivity check
+  // Health and Supabase live connectivity & data sync
   useEffect(() => {
     let mounted = true;
     const syncWithBackend = async () => {
-      if (isSupabaseConfigured()) {
+      if (supabaseService.isAvailable()) {
         try {
-          const products = await supabaseService.getProducts();
-          if (mounted && products) {
+          const liveData = await supabaseService.fetchFullEcosystem();
+          if (mounted && liveData) {
+            setEcosystem((prev) => ({
+              ...prev,
+              ...(liveData.products ? { products: liveData.products } : {}),
+              ...(liveData.students ? { students: liveData.students } : {}),
+              ...(liveData.orders ? { orders: liveData.orders } : {}),
+              ...(liveData.transactions ? { transactions: liveData.transactions } : {}),
+              ...(liveData.spendingControls ? { spendingControls: liveData.spendingControls } : {}),
+            }));
             setBackendConnected(true);
             return;
           }
-        } catch {
-          // fallback
+        } catch (err) {
+          console.warn('Supabase initial sync error:', err);
         }
       }
       try {

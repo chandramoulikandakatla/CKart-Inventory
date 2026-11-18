@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { supabaseService } from '../../services/supabaseService';
 import type {
   EcosystemState,
   Student,
@@ -370,6 +371,32 @@ export function useStudentActions(params: StudentActionParams) {
         transactions: [newTxn, ...prev.transactions],
         notifications: [...newNotifs, ...prev.notifications],
       }));
+
+      // Synchronize live checkout with Supabase
+      if (supabaseService.isAvailable()) {
+        supabaseService.submitOrder({
+          studentCode: currentStudent.id,
+          items: populatedCart.map((i) => ({
+            productId: i.id,
+            name: i.name,
+            category: i.category,
+            price: i.price,
+            qty: i.qty,
+            subtotal: i.subtotal,
+          })),
+          totalAmount: cartFinalPayable,
+          fulfilmentMethod: fulfilmentType,
+          collectionPoint: selectedCollectionPoint,
+          idempotencyKey: constidemKey,
+        }).then((res) => {
+          if (res) {
+            setEcosystem((prev) => ({
+              ...prev,
+              students: prev.students.map((s) => (s.id === currentStudent.id ? { ...s, walletBalance: res.newBalance } : s)),
+            }));
+          }
+        });
+      }
 
       setLastConfirmedOrder(newOrder);
       setTrackingOrderId(orderId);
