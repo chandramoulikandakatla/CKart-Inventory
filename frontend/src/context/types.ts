@@ -7,6 +7,7 @@ import type { ToastData } from '../components/common/ToastNotification';
 import type {
   EcosystemState,
   Student,
+  ParentAccount,
   Product,
   Order,
   SpendingControls,
@@ -102,6 +103,12 @@ export interface CampusKartContextType {
   setParentScreen: React.Dispatch<React.SetStateAction<ParentScreen | string>>;
   parentAuthed: boolean;
   setParentAuthed: React.Dispatch<React.SetStateAction<boolean>>;
+  currentParent: ParentAccount | null;
+  setCurrentParent: React.Dispatch<React.SetStateAction<ParentAccount | null>>;
+  parentUsernameInput: string;
+  setParentUsernameInput: React.Dispatch<React.SetStateAction<string>>;
+  parentPasswordInput: string;
+  setParentPasswordInput: React.Dispatch<React.SetStateAction<string>>;
   parentLookupStudentId: string;
   setParentLookupStudentId: React.Dispatch<React.SetStateAction<string>>;
   parentPinInput: string;
@@ -195,6 +202,7 @@ export interface CampusKartContextType {
   handleConfirmAndPay: () => void;
   handleParentLogin: (e?: React.FormEvent) => void;
   handleParentLogout: () => void;
+  handleSwitchLinkedChild: (studentId: string) => void;
   handleConfirmParentFunding: () => void;
   handleSaveSpendingControls: (updatedControls: SpendingControls) => void;
   handleOpsUpdateOrderStatus: (orderId: string, nextStatus: string) => void;

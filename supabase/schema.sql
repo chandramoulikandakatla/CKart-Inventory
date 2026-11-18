@@ -34,10 +34,21 @@ CREATE TABLE IF NOT EXISTS students (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS parents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username TEXT NOT NULL UNIQUE,
+    email TEXT UNIQUE,
+    mobile TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    full_name TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('active', 'inactive')) DEFAULT 'active',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS parent_links (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    parent_account_id UUID NOT NULL,
+    parent_account_id UUID NOT NULL REFERENCES parents(id) ON DELETE CASCADE,
     relationship TEXT NOT NULL DEFAULT 'Guardian',
     status TEXT NOT NULL CHECK (status IN ('verified', 'pending', 'revoked')) DEFAULT 'verified',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -148,6 +159,8 @@ ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wallet_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE spending_controls ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE parents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE parent_links ENABLE ROW LEVEL SECURITY;
 
 -- Clean existing policies for idempotency
 DO $$
@@ -162,6 +175,8 @@ BEGIN
     DROP POLICY IF EXISTS "allow_all_wallet_transactions" ON wallet_transactions;
     DROP POLICY IF EXISTS "allow_all_spending_controls" ON spending_controls;
     DROP POLICY IF EXISTS "allow_all_notifications" ON notifications;
+    DROP POLICY IF EXISTS "allow_all_parents" ON parents;
+    DROP POLICY IF EXISTS "allow_all_parent_links" ON parent_links;
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
 
@@ -176,6 +191,8 @@ CREATE POLICY "allow_all_order_items" ON order_items FOR ALL USING (true);
 CREATE POLICY "allow_all_wallet_transactions" ON wallet_transactions FOR ALL USING (true);
 CREATE POLICY "allow_all_spending_controls" ON spending_controls FOR ALL USING (true);
 CREATE POLICY "allow_all_notifications" ON notifications FOR ALL USING (true);
+CREATE POLICY "allow_all_parents" ON parents FOR ALL USING (true);
+CREATE POLICY "allow_all_parent_links" ON parent_links FOR ALL USING (true);
 
 -- ------------------------------------------------------------------------------
 -- 3. Atomic Database Functions (RPCs)
@@ -413,6 +430,21 @@ VALUES
     ('a0000000-0000-0000-0000-000000000102', 35000, 150000, 350000),
     ('a0000000-0000-0000-0000-000000000103', 40000, 150000, 300000)
 ON CONFLICT (student_id) DO NOTHING;
+
+-- Default Parents & Multi-Tenant Links
+INSERT INTO parents (id, username, email, mobile, password_hash, full_name, status)
+VALUES
+    ('d0000000-0000-0000-0000-000000000501', 'rajesh_sharma', 'rajesh.sharma@example.com', '9876543210', crypt('parent123', gen_salt('bf')), 'Rajesh Sharma', 'active'),
+    ('d0000000-0000-0000-0000-000000000502', 'lakshmi_reddy', 'lakshmi.reddy@example.com', '9440177889', crypt('parent123', gen_salt('bf')), 'Lakshmi Reddy', 'active'),
+    ('d0000000-0000-0000-0000-000000000503', 'vikram_verma', 'vikram.verma@example.com', '9848055667', crypt('parent123', gen_salt('bf')), 'Vikram Verma', 'active')
+ON CONFLICT (username) DO NOTHING;
+
+INSERT INTO parent_links (student_id, parent_account_id, relationship, status)
+VALUES
+    ('a0000000-0000-0000-0000-000000000101', 'd0000000-0000-0000-0000-000000000501', 'Guardian', 'verified'),
+    ('a0000000-0000-0000-0000-000000000102', 'd0000000-0000-0000-0000-000000000502', 'Guardian', 'verified'),
+    ('a0000000-0000-0000-0000-000000000103', 'd0000000-0000-0000-0000-000000000503', 'Guardian', 'verified')
+ON CONFLICT (student_id, parent_account_id) DO NOTHING;
 
 -- 74 Final Products Catalog across 15 Categories
 INSERT INTO products (id, college_id, name, description, category, image_url, price_paise, stock_quantity, is_available)

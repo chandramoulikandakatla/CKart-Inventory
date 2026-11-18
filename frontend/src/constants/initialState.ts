@@ -25,6 +25,8 @@ export const INITIAL_STATE: EcosystemState = {
       walletBalance: 0,
       parentId: "PAR-101",
       parentName: "Rajesh Sharma",
+      parentUsername: "rajesh_sharma",
+      parentPassword: "parent123",
       parentPin: "9999",
       parentPhone: "+91 98480 22334",
       notificationsPref: { sms: true, app: true, lowBalance: true }
@@ -41,6 +43,8 @@ export const INITIAL_STATE: EcosystemState = {
       walletBalance: 0,
       parentId: "PAR-102",
       parentName: "Lakshmi Reddy",
+      parentUsername: "lakshmi_reddy",
+      parentPassword: "parent123",
       parentPin: "8888",
       parentPhone: "+91 94401 77889",
       notificationsPref: { sms: true, app: true, lowBalance: true }
@@ -57,9 +61,43 @@ export const INITIAL_STATE: EcosystemState = {
       walletBalance: 0,
       parentId: "PAR-103",
       parentName: "Vikram Verma",
+      parentUsername: "vikram_verma",
+      parentPassword: "parent123",
       parentPin: "7777",
       parentPhone: "+91 91234 55667",
       notificationsPref: { sms: false, app: true, lowBalance: true }
+    }
+  ],
+  parents: [
+    {
+      id: "PAR-101",
+      username: "rajesh_sharma",
+      name: "Rajesh Sharma",
+      email: "rajesh.sharma@example.com",
+      mobile: "9876543210",
+      password: "parent123",
+      pin: "9999",
+      linkedStudentIds: ["CK-2026-101"]
+    },
+    {
+      id: "PAR-102",
+      username: "lakshmi_reddy",
+      name: "Lakshmi Reddy",
+      email: "lakshmi.reddy@example.com",
+      mobile: "9440177889",
+      password: "parent123",
+      pin: "8888",
+      linkedStudentIds: ["CK-2026-102"]
+    },
+    {
+      id: "PAR-103",
+      username: "vikram_verma",
+      name: "Vikram Verma",
+      email: "vikram.verma@example.com",
+      mobile: "9848055667",
+      password: "parent123",
+      pin: "7777",
+      linkedStudentIds: ["CK-2026-103"]
     }
   ],
   spendingControls: {

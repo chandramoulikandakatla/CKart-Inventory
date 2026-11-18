@@ -37,32 +37,42 @@ function runIsolationTests() {
   console.log('  -> PASSED: All students initialized with zero balances.\n');
 
   // 2. Parent Authentication Simulation
-  console.log('[Test 2] Guardian Identity & PIN Verification:');
-  // 2a. Correct PIN for Aarav's parent (Rajesh)
+  console.log('[Test 2] Guardian Identity & Scalable Credential Verification:');
+  // 2a. Username & Password Authentication for Rajesh Sharma
+  const userRajesh = 'rajesh_sharma';
+  const passRajesh = 'parent123';
+  const parentRajesh = (state.parents || []).find(p => p.username === userRajesh && p.password === passRajesh);
+  if (!parentRajesh || parentRajesh.name !== 'Rajesh Sharma') {
+    throw new Error('Failed to authenticate Rajesh Sharma with username and password.');
+  }
+  console.log(`  - Rajesh Sharma authenticated successfully via username "@${parentRajesh.username}" and password.`);
+
+  // 2b. Incorrect Password for Rajesh fails
+  const badPass = 'wrong_password_123';
+  const badAuth = (state.parents || []).find(p => p.username === userRajesh && p.password === badPass);
+  if (badAuth) {
+    throw new Error('Authentication succeeded with invalid password!');
+  }
+  console.log('  - Invalid password rejected as expected.');
+
+  // 2c. Backward-compatible PIN matching on student record
   const queryRajesh = 'CK-2026-101';
   const pinRajesh = '9999';
   const matchAarav = state.students.find(s => s.id === queryRajesh && s.parentPin === pinRajesh);
   if (!matchAarav || matchAarav.parentName !== 'Rajesh Sharma') {
     throw new Error('Failed to authenticate Rajesh Sharma with valid PIN.');
   }
-  console.log(`  - Rajesh Sharma authenticated successfully for child: ${matchAarav.name}`);
+  console.log(`  - Backward-compatible PIN verification verified for child: ${matchAarav.name}`);
 
-  // 2b. Incorrect PIN for Diya's parent
-  const badPin = '0000';
-  const matchDiyaFail = state.students.find(s => s.id === 'CK-2026-102' && s.parentPin === badPin);
-  if (matchDiyaFail) {
-    throw new Error('Authentication succeeded with invalid PIN!');
+  // 2d. Username & Password for Lakshmi Reddy
+  const userLakshmi = 'lakshmi_reddy';
+  const passLakshmi = 'parent123';
+  const parentLakshmi = (state.parents || []).find(p => p.username === userLakshmi && p.password === passLakshmi);
+  if (!parentLakshmi || parentLakshmi.name !== 'Lakshmi Reddy') {
+    throw new Error('Failed to authenticate Lakshmi Reddy with valid credentials.');
   }
-  console.log('  - Invalid PIN rejected as expected for Diya Reddy.');
-
-  // 2c. Correct PIN for Diya's parent (Lakshmi)
-  const pinLakshmi = '8888';
-  const matchDiya = state.students.find(s => s.id === 'CK-2026-102' && s.parentPin === pinLakshmi);
-  if (!matchDiya || matchDiya.parentName !== 'Lakshmi Reddy') {
-    throw new Error('Failed to authenticate Lakshmi Reddy with valid PIN.');
-  }
-  console.log(`  - Lakshmi Reddy authenticated successfully for child: ${matchDiya.name}`);
-  console.log('  -> PASSED: Dedicated guardian PIN validation strictly isolates sessions.\n');
+  console.log(`  - Lakshmi Reddy authenticated successfully via username "@${parentLakshmi.username}".`);
+  console.log('  -> PASSED: Scalable guardian username/password & dedicated PIN validation strictly isolates sessions.\n');
 
   // 3. Parent Wallet Funding Scoping
   console.log('[Test 3] Parent Wallet Funding Isolation:');

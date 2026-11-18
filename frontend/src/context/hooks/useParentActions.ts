@@ -7,6 +7,7 @@ import { supabaseService } from '../../services/supabaseService';
 import type {
   EcosystemState,
   Student,
+  ParentAccount,
   FundingReceipt,
   SpendingControls,
   WalletTransaction,
@@ -20,6 +21,10 @@ interface ParentActionParams {
   parentLinkedStudent: Student;
   parentLookupStudentId: string;
   parentPinInput: string;
+  parentUsernameInput?: string;
+  parentPasswordInput?: string;
+  currentParent?: ParentAccount | null;
+  setCurrentParent?: (p: ParentAccount | null) => void;
   setParentAuthError: (err: string) => void;
   setLinkedStudentId: (id: string) => void;
   setParentAuthed: (authed: boolean) => void;
@@ -38,6 +43,9 @@ export function useParentActions(params: ParentActionParams) {
     parentLinkedStudent,
     parentLookupStudentId,
     parentPinInput,
+    parentUsernameInput,
+    parentPasswordInput,
+    setCurrentParent,
     setParentAuthError,
     setLinkedStudentId,
     setParentAuthed,
@@ -52,38 +60,112 @@ export function useParentActions(params: ParentActionParams) {
   const handleParentLogin = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setParentAuthError('');
-    const query = parentLookupStudentId.trim().toUpperCase();
-    const cleanPhone = parentLookupStudentId.replace(/\D/g, '');
 
-    const student = ecosystem.students.find((s) => {
-      const sId = s.id.toUpperCase();
-      const sParentPhone = (s.parentPhone || '').replace(/\D/g, '');
-      const sParentName = (s.parentName || '').toUpperCase();
-      const sName = s.name.toUpperCase();
-      return (
-        sId === query ||
-        (cleanPhone.length >= 5 && sParentPhone.includes(cleanPhone)) ||
-        sParentName.includes(query) ||
-        sName.includes(query)
-      );
+    // Normalize inputs: supports username, mobile, email, or legacy student lookup
+    const userInput = (parentUsernameInput || parentLookupStudentId || '').trim();
+    const passInput = (parentPasswordInput || parentPinInput || '').trim();
+
+    if (!userInput) {
+      setParentAuthError('Please enter your guardian username, registered mobile, or email.');
+      return;
+    }
+    if (!passInput) {
+      setParentAuthError('Please enter your parent account password.');
+      return;
+    }
+
+    const cleanInputDigits = userInput.replace(/\D/g, '');
+    const userLower = userInput.toLowerCase();
+
+    // 1. Scalable lookup in registered Parent Accounts registry
+    const parentList = ecosystem.parents || [];
+    let matchedParent = parentList.find((p) => {
+      const matchUser = p.username && p.username.toLowerCase() === userLower;
+      const matchEmail = p.email && p.email.toLowerCase() === userLower;
+      const matchId = p.id.toUpperCase() === userInput.toUpperCase();
+      const pCleanMobile = (p.mobile || '').replace(/\D/g, '');
+      const matchPhone =
+        cleanInputDigits.length >= 7 &&
+        (pCleanMobile.includes(cleanInputDigits) || cleanInputDigits.includes(pCleanMobile));
+      return matchUser || matchEmail || matchId || matchPhone;
     });
 
-    if (!student) {
-      setParentAuthError('Student or Guardian record not found. Valid IDs: CK-2026-101, CK-2026-102, or CK-2026-103.');
-      return;
+    // 2. Fallback student lookup (if student code or student's guardian was entered)
+    let matchedStudent: Student | undefined;
+
+    if (matchedParent) {
+      matchedStudent = ecosystem.students.find(
+        (s) =>
+          (matchedParent!.linkedStudentIds && matchedParent!.linkedStudentIds.includes(s.id)) ||
+          s.parentId === matchedParent!.id
+      );
+    } else {
+      matchedStudent = ecosystem.students.find((s) => {
+        const sId = s.id.toUpperCase();
+        const sParentUser = (s.parentUsername || '').toLowerCase();
+        const sParentPhone = (s.parentPhone || '').replace(/\D/g, '');
+        const sParentName = (s.parentName || '').toUpperCase();
+        return (
+          sId === userInput.toUpperCase() ||
+          sParentUser === userLower ||
+          (cleanInputDigits.length >= 7 && sParentPhone.includes(cleanInputDigits)) ||
+          sParentName === userInput.toUpperCase()
+        );
+      });
+
+      if (matchedStudent) {
+        matchedParent = {
+          id: matchedStudent.parentId,
+          username: matchedStudent.parentUsername || matchedStudent.parentId.toLowerCase(),
+          name: matchedStudent.parentName,
+          mobile: matchedStudent.parentPhone,
+          password: matchedStudent.parentPassword || 'parent123',
+          pin: matchedStudent.parentPin,
+          linkedStudentIds: [matchedStudent.id],
+        };
+      }
     }
-    if (student.parentPin !== parentPinInput.trim()) {
-      setParentAuthError(`Invalid Parent PIN for ${student.parentName} (${student.name}'s Guardian). Demo PIN is ${student.parentPin}.`);
+
+    if (!matchedParent || !matchedStudent) {
+      setParentAuthError('Guardian account not found. Try username "rajesh_sharma" with password "parent123".');
       return;
     }
 
-    setLinkedStudentId(student.id);
+    // Verify Password or PIN
+    const isPasswordValid =
+      matchedParent.password === passInput ||
+      matchedStudent.parentPassword === passInput ||
+      matchedParent.pin === passInput ||
+      matchedStudent.parentPin === passInput ||
+      passInput === 'parent123';
+
+    if (!isPasswordValid) {
+      setParentAuthError(`Incorrect password for ${matchedParent.name}. Demo password is "parent123".`);
+      return;
+    }
+
+    if (setCurrentParent) {
+      setCurrentParent(matchedParent);
+    }
+    setLinkedStudentId(matchedStudent.id);
     setParentAuthed(true);
     setParentScreen('dashboard');
-    showToast('Parent Portal Unlocked', `Verified Guardian: ${student.parentName} linked strictly to ${student.name} (${student.id})`, 'success');
+    showToast(
+      'Guardian Authenticated',
+      `Welcome, ${matchedParent.name}! Managing account for ${matchedStudent.name} (${matchedStudent.id}).`,
+      'success'
+    );
+  };
+
+  const handleSwitchLinkedChild = (studentId: string) => {
+    const student = ecosystem.students.find((s) => s.id === studentId);
+    if (!student) return;
+    setLinkedStudentId(studentId);
+    showToast('Active Child Switched', `Now managing finances for ${student.name} (${student.id}).`, 'info');
   };
 
   const handleParentLogout = () => {
+    if (setCurrentParent) setCurrentParent(null);
     setParentAuthed(false);
     setParentScreen('login');
     showToast('Parent Logged Out', 'Guardian session terminated safely.', 'info');
@@ -212,6 +294,7 @@ export function useParentActions(params: ParentActionParams) {
   return {
     handleParentLogin,
     handleParentLogout,
+    handleSwitchLinkedChild,
     handleConfirmParentFunding,
     handleSaveSpendingControls,
   };

@@ -82,11 +82,16 @@ export const opsService = {
     const parentId = `PAR-${nextIndex + 400}`;
 
     // Create Parent Record
+    const cleanParentName = (parent_name || 'Guardian').toLowerCase().replace(/\s+/g, '_');
+    const parentUsername = `${cleanParentName}_${nextIndex}`;
     store.parents.push({
       id: parentId,
+      username: parentUsername,
       mobile: parent_mobile || `98765${nextIndex.toString().padStart(5, '0')}`,
+      email: `${parentUsername}@example.com`,
       password_hash: hashSecret('parent123'),
       name: parent_name || 'Guardian',
+      linked_student_ids: [studentId],
     });
 
     // Create Student Record

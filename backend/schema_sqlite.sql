@@ -26,10 +26,21 @@ CREATE TABLE IF NOT EXISTS students (
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS parents (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
+    email TEXT UNIQUE,
+    mobile TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    full_name TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('active', 'inactive')) DEFAULT 'active',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS parent_links (
     id TEXT PRIMARY KEY,
     student_id TEXT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    parent_account_id TEXT NOT NULL,
+    parent_account_id TEXT NOT NULL REFERENCES parents(id) ON DELETE CASCADE,
     parent_name TEXT NOT NULL,
     parent_pin_hash TEXT NOT NULL,
     relationship TEXT NOT NULL DEFAULT 'Guardian',

@@ -9,6 +9,7 @@ import { isSupabaseConfigured, supabaseService } from '../services';
 import type {
   EcosystemState,
   Student,
+  ParentAccount,
   Order,
   FundingReceipt,
   PortalType,
@@ -163,6 +164,16 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
       return false;
     }
   });
+  const [currentParent, setCurrentParent] = useState<ParentAccount | null>(() => {
+    try {
+      const saved = localStorage.getItem('campuskart_current_parent');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [parentUsernameInput, setParentUsernameInput] = useState('rajesh_sharma');
+  const [parentPasswordInput, setParentPasswordInput] = useState('parent123');
   const [parentLookupStudentId, setParentLookupStudentId] = useState('CK-2026-101');
   const [parentPinInput, setParentPinInput] = useState('9999');
   const [parentAuthError, setParentAuthError] = useState('');
@@ -221,11 +232,16 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
       localStorage.setItem('campuskart_parent_screen', String(parentScreen));
       localStorage.setItem('campuskart_parent_authed', String(parentAuthed));
       localStorage.setItem('campuskart_parent_linked_student_id', linkedStudentId);
+      if (currentParent) {
+        localStorage.setItem('campuskart_current_parent', JSON.stringify(currentParent));
+      } else {
+        localStorage.removeItem('campuskart_current_parent');
+      }
       localStorage.setItem('campuskart_cart', JSON.stringify(cart));
     } catch {
       // Ignore storage errors
     }
-  }, [studentScreen, loggedStudentId, studentAuthed, parentScreen, parentAuthed, linkedStudentId, cart]);
+  }, [studentScreen, loggedStudentId, studentAuthed, parentScreen, parentAuthed, linkedStudentId, currentParent, cart]);
 
   // 8. Derived Metrics Hook
   const derived = useDerivedMetrics(ecosystem, loggedStudentId, linkedStudentId, cart);
@@ -276,6 +292,10 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
     parentLinkedStudent: derived.parentLinkedStudent,
     parentLookupStudentId,
     parentPinInput,
+    parentUsernameInput,
+    parentPasswordInput,
+    currentParent,
+    setCurrentParent,
     setParentAuthError,
     setLinkedStudentId,
     setParentAuthed,
@@ -399,6 +419,12 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
         setParentScreen,
         parentAuthed,
         setParentAuthed,
+        currentParent,
+        setCurrentParent,
+        parentUsernameInput,
+        setParentUsernameInput,
+        parentPasswordInput,
+        setParentPasswordInput,
         parentLookupStudentId,
         setParentLookupStudentId,
         parentPinInput,

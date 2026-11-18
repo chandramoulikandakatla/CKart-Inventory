@@ -10,6 +10,7 @@ import {
   walletService,
   controlService,
   orderService,
+  parentService,
   notificationService,
   ecosystemService,
 } from './supabase';
@@ -97,6 +98,13 @@ export const supabaseService = {
 
   async updateOrderStatus(orderId: string, nextStatus: string): Promise<boolean> {
     return orderService.updateOrderStatus(orderId, nextStatus);
+  },
+
+  /**
+   * Guardian operations
+   */
+  async authenticateParent(identifier: string, passwordOrPin: string) {
+    return parentService.authenticateParent(identifier, passwordOrPin);
   },
 
   /**

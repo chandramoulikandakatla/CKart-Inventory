@@ -26,10 +26,21 @@ CREATE TABLE students (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE parents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username TEXT NOT NULL UNIQUE,
+    email TEXT UNIQUE,
+    mobile TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    full_name TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('active', 'inactive')) DEFAULT 'active',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE parent_links (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-    parent_account_id UUID NOT NULL,
+    parent_account_id UUID NOT NULL REFERENCES parents(id) ON DELETE CASCADE,
     relationship TEXT NOT NULL DEFAULT 'Guardian',
     status TEXT NOT NULL CHECK (status IN ('verified', 'pending', 'revoked')) DEFAULT 'verified',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

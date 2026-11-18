@@ -107,7 +107,7 @@ async function runTests() {
     });
     assert(badParent.status === 401, 'Bad parent credentials must return 401');
 
-    // Valid parent login succeeds
+    // Valid parent login succeeds via mobile + password
     const goodParent = await apiRequest('/api/parent/auth/login', 'POST', {
       mobile: '9876543210',
       password: 'parent123',
@@ -115,6 +115,14 @@ async function runTests() {
     assert(goodParent.status === 200, 'Valid parent credentials must return 200');
     const parentToken = goodParent.data.session_token;
     assert(Boolean(parentToken), 'Should receive parent session_token');
+
+    // Valid parent login succeeds via scalable username + password
+    const goodParentUser = await apiRequest('/api/parent/auth/login', 'POST', {
+      username: 'rajesh_sharma',
+      password: 'parent123',
+    });
+    assert(goodParentUser.status === 200, 'Valid parent username credentials must return 200');
+    assert(goodParentUser.data.parent_name === 'Rajesh Sharma', 'Parent name must match');
 
     console.log('  -> Test 1 Passed: Independent role auth and isolation verified.');
 

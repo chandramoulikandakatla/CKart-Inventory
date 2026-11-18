@@ -31,9 +31,12 @@ export interface StudentRecord {
 
 export interface ParentRecord {
   id: string;
+  username: string;
   mobile: string;
+  email?: string;
   password_hash: string;
   name: string;
+  linked_student_ids?: string[];
 }
 
 export interface StaffRecord {

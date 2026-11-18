@@ -69,9 +69,22 @@ export interface Student {
   walletBalance: number;
   parentId: string;
   parentName: string;
+  parentUsername?: string;
+  parentPassword?: string;
   parentPin: string;
   parentPhone: string;
   notificationsPref: StudentNotificationPref;
+}
+
+export interface ParentAccount {
+  id: string;
+  username: string;
+  name: string;
+  email?: string;
+  mobile: string;
+  password?: string;
+  pin?: string;
+  linkedStudentIds: string[];
 }
 
 export interface SpendingControls {
@@ -170,6 +183,7 @@ export interface Notification {
 export interface EcosystemState {
   college: College;
   students: Student[];
+  parents?: ParentAccount[];
   spendingControls: Record<string, SpendingControls>;
   products: Product[];
   orders: Order[];

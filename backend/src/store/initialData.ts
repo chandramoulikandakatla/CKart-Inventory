@@ -56,21 +56,30 @@ export function createInitialStore(): BackendStore {
     parents: [
       {
         id: 'PAR-501',
+        username: 'rajesh_sharma',
         mobile: '9876543210',
+        email: 'rajesh.sharma@example.com',
         password_hash: hashSecret('parent123'),
         name: 'Rajesh Sharma',
+        linked_student_ids: ['STU-101'],
       },
       {
         id: 'PAR-502',
+        username: 'lakshmi_reddy',
         mobile: '9440177889',
+        email: 'lakshmi.reddy@example.com',
         password_hash: hashSecret('parent123'),
         name: 'Lakshmi Reddy',
+        linked_student_ids: ['STU-102'],
       },
       {
         id: 'PAR-503',
+        username: 'vikram_verma',
         mobile: '9848055667',
+        email: 'vikram.verma@example.com',
         password_hash: hashSecret('parent123'),
         name: 'Vikram Verma',
+        linked_student_ids: ['STU-103'],
       },
     ],
     staff: [

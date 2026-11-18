@@ -13,6 +13,8 @@ export const ParentDashboardScreen: React.FC = () => {
     setReceiptModalOrder,
     setParentScreen,
     handleParentLogout,
+    handleSwitchLinkedChild,
+    currentParent,
     parentLinkedStudent,
     parentOrders,
     parentControls,
@@ -20,6 +22,13 @@ export const ParentDashboardScreen: React.FC = () => {
     parentCategoryChartData,
     parentMonthlyChartData,
   } = useCampusKart();
+
+  const linkedChildren = ecosystem.students.filter(
+    (s) =>
+      (currentParent?.linkedStudentIds && currentParent.linkedStudentIds.includes(s.id)) ||
+      (currentParent && s.parentId === currentParent.id) ||
+      s.id === parentLinkedStudent.id
+  );
 
   return (
             <div className="space-y-6">
@@ -29,18 +38,37 @@ export const ParentDashboardScreen: React.FC = () => {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono uppercase bg-emerald-500/20 text-sky-800 border border-cyan-300/80 flex items-center gap-1">
                       <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                      Guardian: {parentLinkedStudent.parentName}
+                      Guardian: {currentParent ? `${currentParent.name} (@${currentParent.username})` : parentLinkedStudent.parentName}
                     </span>
                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-sky-500/15 text-sky-900 border border-sky-300/80 flex items-center gap-1">
                       <CheckCircle className="w-3 h-3 text-sky-600" />
                       Linked Student: <strong>{parentLinkedStudent.name}</strong> ({parentLinkedStudent.id})
                     </span>
+                    {linkedChildren.length > 1 && (
+                      <div className="flex items-center gap-1 bg-white/90 border border-cyan-300/80 rounded-full px-2 py-0.5 text-[10px]">
+                        <span className="text-stone-500 font-semibold">Active:</span>
+                        {linkedChildren.map((child) => (
+                          <button
+                            key={child.id}
+                            type="button"
+                            onClick={() => handleSwitchLinkedChild(child.id)}
+                            className={`px-2 py-0.5 rounded-full font-bold transition-all ${
+                              child.id === parentLinkedStudent.id
+                                ? 'bg-sky-600 text-white shadow-sm'
+                                : 'text-sky-800 hover:bg-sky-100'
+                            }`}
+                          >
+                            {child.firstName}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={handleParentLogout}
                       className="px-2.5 py-0.5 rounded-full text-[10px] bg-rose-500/15 hover:bg-rose-500/25 text-rose-700 border border-rose-300/70 flex items-center gap-1 transition-all"
                     >
-                      <LogOut className="w-2.5 h-2.5" /> Switch Student / Logout
+                      <LogOut className="w-2.5 h-2.5" /> Logout
                     </button>
                   </div>
                   <h1 className="text-2xl font-extrabold text-[#2C1A12]">
