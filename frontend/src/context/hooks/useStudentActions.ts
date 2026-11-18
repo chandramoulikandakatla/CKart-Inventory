@@ -149,23 +149,31 @@ export function useStudentActions(params: StudentActionParams) {
       showToast('Unavailable', `${product.name} is currently out of stock.`, 'error');
       return;
     }
-    const existing = cart.find((c) => c.productId === product.id);
-    const currentQty = existing ? existing.qty : 0;
-    if (currentQty + qtyToAdd > product.stock) {
-      showToast('Stock Limit Reached', `Only ${product.stock} units of ${product.name} available in stock.`, 'error');
-      return;
-    }
-    if (existing) {
-      setCart(cart.map((c) => (c.productId === product.id ? { ...c, qty: c.qty + qtyToAdd } : c)));
+    let outcome: 'success' | 'limit' = 'success';
+    setCart((prev) => {
+      const existing = prev.find((c) => c.productId === product.id);
+      const currentQty = existing ? existing.qty : 0;
+      if (currentQty + qtyToAdd > product.stock) {
+        outcome = 'limit';
+        return prev;
+      }
+      outcome = 'success';
+      if (existing) {
+        return prev.map((c) => (c.productId === product.id ? { ...c, qty: c.qty + qtyToAdd } : c));
+      }
+      return [...prev, { productId: product.id, qty: qtyToAdd }];
+    });
+    if (outcome === 'success') {
+      showToast('Added to Cart', `${qtyToAdd}x ${product.name} added to your CampusKart bag.`, 'success');
     } else {
-      setCart([...cart, { productId: product.id, qty: qtyToAdd }]);
+      showToast('Stock Limit Reached', `Only ${product.stock} units of ${product.name} available in stock.`, 'error');
     }
-    showToast('Added to Cart', `${qtyToAdd}x ${product.name} added to your CampusKart bag.`, 'success');
   };
 
   const handleUpdateCartQty = (productId: string, delta: number) => {
     const product = ecosystem.products.find((p) => p.id === productId);
     if (!product) return;
+    let limitReached = false;
     setCart((prev) =>
       prev
         .map((item) => {
@@ -173,13 +181,16 @@ export function useStudentActions(params: StudentActionParams) {
           const nextQty = item.qty + delta;
           if (nextQty <= 0) return null;
           if (nextQty > product.stock) {
-            showToast('Stock Limit', `Maximum available stock is ${product.stock} units.`, 'error');
+            limitReached = true;
             return item;
           }
           return { ...item, qty: nextQty };
         })
         .filter(Boolean) as Array<{ productId: string; qty: number }>
     );
+    if (limitReached) {
+      showToast('Stock Limit', `Maximum available stock is ${product.stock} units.`, 'error');
+    }
   };
 
   const handleRemoveFromCart = (productId: string) => {

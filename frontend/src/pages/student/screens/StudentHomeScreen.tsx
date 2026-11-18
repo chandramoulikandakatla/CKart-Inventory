@@ -1,10 +1,7 @@
 import React from 'react';
 import {
-  Wallet, UserCheck, Plus, Clock, Package, Truck, RefreshCw, Star
+  Wallet, UserCheck, Plus, Minus, Lock, ShoppingBag, Clock, Package, Truck, RefreshCw, Star
 } from 'lucide-react';
-import {
-  Bar
-} from 'recharts';
 import { ProductArtwork } from '../../../components/common/ProductArtwork';
 import { CATEGORIES } from '../../../constants/initialState';
 import { useCampusKart } from '../../../context/CampusKartContext';
@@ -20,6 +17,11 @@ export const StudentHomeScreen: React.FC = () => {
     studentOrders,
     handleOpenProductDetail,
     handleAddToCart,
+    handleUpdateCartQty,
+    cart,
+    cartItemCount,
+    cartFinalPayable,
+    studentControls,
   } = useCampusKart();
 
   return (
@@ -156,44 +158,99 @@ export const StudentHomeScreen: React.FC = () => {
                   </h2>
                 </div>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {ecosystem.products.filter(p => p.featured && p.active).slice(0, 4).map(prod => (
-                    <div
-                      key={prod.id}
-                      className="bg-white/90 backdrop-blur-xl shadow-[0_10px_30px_-6px_rgba(44,26,18,0.07)] border border-stone-200/80 hover:border-orange-400/70 rounded-2xl p-3.5 flex flex-col justify-between transition-all"
-                    >
-                      <div>
-                        <div className="cursor-pointer" onClick={() => handleOpenProductDetail(prod.id)}>
-                          <ProductArtwork category={prod.category} id={prod.id} imageUrl={prod.imageUrl} name={prod.name} className="w-full h-32" />
-                        </div>
-                        <div className="flex items-center justify-between mt-3">
-                          <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-[#F5F0EB]/90 text-stone-600">
-                            {prod.category}
-                          </span>
-                          <span className="text-[10px] font-semibold text-orange-600">{prod.offerTag}</span>
-                        </div>
-                        <h3
-                          onClick={() => handleOpenProductDetail(prod.id)}
-                          className="text-sm font-bold text-[#2C1A12] mt-1.5 cursor-pointer hover:text-orange-700 line-clamp-1"
-                        >
-                          {prod.name}
-                        </h3>
-                        <p className="text-xs text-stone-500 mt-1 line-clamp-2">{prod.description}</p>
-                      </div>
-
-                      <div className="flex items-center justify-between mt-4 pt-3 border-t border-stone-200/80">
+                  {ecosystem.products.filter(p => p.featured && p.active).slice(0, 4).map(prod => {
+                    const inCartItem = cart.find(c => c.productId === prod.id);
+                    const isRestricted = studentControls.restrictedCategories?.includes(prod.category);
+                    return (
+                      <div
+                        key={prod.id}
+                        className="bg-white/90 backdrop-blur-xl shadow-[0_10px_30px_-6px_rgba(44,26,18,0.07)] border border-stone-200/80 hover:border-orange-400/70 rounded-2xl p-3.5 flex flex-col justify-between transition-all"
+                      >
                         <div>
-                          <span className="text-base font-extrabold text-[#2C1A12]">₹{prod.price}</span>
-                          <span className="block text-[10px] text-emerald-700">{prod.stock} in stock</span>
+                          <div className="cursor-pointer" onClick={() => handleOpenProductDetail(prod.id)}>
+                            <ProductArtwork category={prod.category} id={prod.id} imageUrl={prod.imageUrl} name={prod.name} className="w-full h-32" />
+                          </div>
+                          <div className="flex items-center justify-between mt-3">
+                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-[#F5F0EB]/90 text-stone-600">
+                              {prod.category}
+                            </span>
+                            <span className="text-[10px] font-semibold text-orange-600">{prod.offerTag}</span>
+                          </div>
+                          <h3
+                            onClick={() => handleOpenProductDetail(prod.id)}
+                            className="text-sm font-bold text-[#2C1A12] mt-1.5 cursor-pointer hover:text-orange-700 line-clamp-1"
+                          >
+                            {prod.name}
+                          </h3>
+                          <p className="text-xs text-stone-500 mt-1 line-clamp-2">{prod.description}</p>
+                          {isRestricted && (
+                            <p className="text-[10px] text-rose-600 mt-1 font-medium flex items-center gap-1">
+                              <Lock className="w-3 h-3" /> Restricted by Parent
+                            </p>
+                          )}
                         </div>
-                        <button
-                          onClick={() => handleAddToCart(prod, 1)}
-                          className="px-3 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold flex items-center gap-1"
-                        >
-                          <Plus className="w-3.5 h-3.5" /> Add
-                        </button>
+
+                        <div className="flex items-center justify-between mt-4 pt-3 border-t border-stone-200/80">
+                          <div>
+                            <span className="text-base font-extrabold text-[#2C1A12]">₹{prod.price}</span>
+                            {prod.stock === 0 ? (
+                              <span className="block text-[10px] text-rose-600 font-semibold">Out of stock</span>
+                            ) : prod.stock <= 5 ? (
+                              <span className="block text-[10px] text-amber-700 font-semibold">Only {prod.stock} left</span>
+                            ) : (
+                              <span className="block text-[10px] text-emerald-700">{prod.stock} in stock</span>
+                            )}
+                          </div>
+
+                          {inCartItem ? (
+                            <div className="flex items-center gap-1.5 bg-[#F4EFEA] border border-orange-400/70 rounded-xl px-2 py-1 shadow-sm">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUpdateCartQty(prod.id, -1);
+                                }}
+                                className="p-1 rounded-lg hover:bg-stone-200/65 text-[#3D251A] transition-colors"
+                                title="Decrease quantity"
+                              >
+                                <Minus className="w-3.5 h-3.5" />
+                              </button>
+                              <span className="text-xs font-bold text-[#2C1A12] min-w-4 text-center">{inCartItem.qty}</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUpdateCartQty(prod.id, 1);
+                                }}
+                                disabled={inCartItem.qty >= prod.stock}
+                                className={`p-1 rounded-lg transition-colors ${
+                                  inCartItem.qty >= prod.stock
+                                    ? 'text-stone-300 cursor-not-allowed'
+                                    : 'hover:bg-stone-200/65 text-[#3D251A]'
+                                }`}
+                                title="Increase quantity"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              disabled={prod.stock <= 0}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddToCart(prod, 1);
+                              }}
+                              className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all ${
+                                prod.stock <= 0
+                                  ? 'bg-[#F5F0EB]/90 text-stone-400 border border-stone-200/60 cursor-not-allowed'
+                                  : 'bg-orange-600 hover:bg-orange-700 text-white shadow-md shadow-orange-500/20 active:scale-95'
+                              }`}
+                            >
+                              <Plus className="w-3.5 h-3.5" /> {prod.stock <= 0 ? 'Out of stock' : 'Add'}
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -205,25 +262,67 @@ export const StudentHomeScreen: React.FC = () => {
                     <RefreshCw className="w-4 h-4 text-orange-600" /> Frequently Purchased by {currentStudent.firstName}
                   </h3>
                   <div className="space-y-2.5">
-                    {ecosystem.products.filter(p => p.frequent && p.active).slice(0, 4).map(prod => (
-                      <div key={prod.id} className="flex items-center justify-between p-2.5 rounded-xl bg-[#F5F0EB]/90 border border-stone-200/60">
-                        <div className="min-w-0 pr-3">
-                          <p
-                            onClick={() => handleOpenProductDetail(prod.id)}
-                            className="text-xs font-semibold text-[#2C1A12] truncate cursor-pointer hover:text-orange-700"
-                          >
-                            {prod.name}
-                          </p>
-                          <p className="text-[11px] text-stone-500">{prod.category} · ₹{prod.price}</p>
+                    {ecosystem.products.filter(p => p.frequent && p.active).slice(0, 4).map(prod => {
+                      const inCartItem = cart.find(c => c.productId === prod.id);
+                      return (
+                        <div key={prod.id} className="flex items-center justify-between p-2.5 rounded-xl bg-[#F5F0EB]/90 border border-stone-200/60">
+                          <div className="min-w-0 pr-3">
+                            <p
+                              onClick={() => handleOpenProductDetail(prod.id)}
+                              className="text-xs font-semibold text-[#2C1A12] truncate cursor-pointer hover:text-orange-700"
+                            >
+                              {prod.name}
+                            </p>
+                            <p className="text-[11px] text-stone-500">{prod.category} · ₹{prod.price}</p>
+                          </div>
+                          {inCartItem ? (
+                            <div className="flex items-center gap-1 bg-white border border-orange-400/70 rounded-lg px-1.5 py-1 shrink-0 shadow-sm">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUpdateCartQty(prod.id, -1);
+                                }}
+                                className="p-0.5 rounded hover:bg-stone-200/65 text-[#3D251A] transition-colors"
+                                title="Decrease quantity"
+                              >
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <span className="text-[11px] font-bold text-[#2C1A12] min-w-4 text-center">{inCartItem.qty}</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUpdateCartQty(prod.id, 1);
+                                }}
+                                disabled={inCartItem.qty >= prod.stock}
+                                className={`p-0.5 rounded transition-colors ${
+                                  inCartItem.qty >= prod.stock
+                                    ? 'text-stone-300 cursor-not-allowed'
+                                    : 'hover:bg-stone-200/65 text-[#3D251A]'
+                                }`}
+                                title="Increase quantity"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              disabled={prod.stock <= 0}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddToCart(prod, 1);
+                              }}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 transition-all ${
+                                prod.stock <= 0
+                                  ? 'bg-stone-200/50 text-stone-400 cursor-not-allowed'
+                                  : 'bg-orange-500/15 hover:bg-orange-500/30 text-orange-700 active:scale-95'
+                              }`}
+                            >
+                              + Reorder
+                            </button>
+                          )}
                         </div>
-                        <button
-                          onClick={() => handleAddToCart(prod, 1)}
-                          className="px-3 py-1.5 rounded-lg bg-orange-500/15 hover:bg-orange-500/30 text-orange-700 text-xs font-semibold shrink-0"
-                        >
-                          + Reorder
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -270,6 +369,22 @@ export const StudentHomeScreen: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Sticky Floating Quick-Cart Access when items exist in bag */}
+              {cartItemCount > 0 && (
+                <div className="sticky bottom-4 z-20 flex justify-end">
+                  <button
+                    onClick={() => setStudentScreen('cart')}
+                    className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-bold text-xs sm:text-sm shadow-xl shadow-orange-500/30 flex items-center gap-2.5 transition-all hover:scale-[1.02] active:scale-95"
+                  >
+                    <div className="p-1 rounded-lg bg-white/20">
+                      <ShoppingBag className="w-4 h-4" />
+                    </div>
+                    <span>{cartItemCount} {cartItemCount === 1 ? 'item' : 'items'} in Cart · ₹{cartFinalPayable}</span>
+                    <span className="pl-2 border-l border-white/30 text-xs font-semibold">View Bag →</span>
+                  </button>
+                </div>
+              )}
             </div>
 
   );
