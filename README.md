@@ -1,6 +1,8 @@
-# CampusKart — Full-Stack Student Commerce Platform
+# CampusKart — 100% TypeScript Student Commerce & Wallet Platform
 
 CampusKart is a high-performance student commerce and pre-funded campus wallet ecosystem engineered for institutional environments (junior colleges, coaching academies, and universities).
+
+The entire codebase is built **exclusively in TypeScript & React (TSX)** with zero Python code, native Supabase cloud database integration, and integer paise monetary precision.
 
 ---
 
@@ -8,83 +10,108 @@ CampusKart is a high-performance student commerce and pre-funded campus wallet e
 
 ```
 cKart/
+├── package.json                          # Monorepo root scripts (npm run dev, npm run server, etc.)
 ├── backend/
-│   ├── schema_sqlite.sql                 # Relational SQLite schema (integer paise precision, foreign keys, check constraints)
-│   ├── schema_postgres_supabase.sql      # Production PostgreSQL / Supabase schema with Row Level Security (RLS)
-│   ├── server.py                         # ACID-compliant HTTP REST API server using sqlite3 & PBKDF2/HMAC
-│   └── test_backend.py                   # Automated full-stack integration test suite
+│   ├── package.json                      # Pure TypeScript backend (Node standard libraries + tsx)
+│   ├── tsconfig.json                     # Strict TypeScript configuration
+│   ├── server.ts                         # ACID-compliant HTTP REST API server (zero Python)
+│   ├── test_backend.ts                   # Asynchronous TypeScript integration test suite
+│   ├── schema_postgres_supabase.sql      # Supabase PostgreSQL schema with RLS
+│   └── schema_sqlite.sql                 # Reference SQLite relational schema
 │
 ├── frontend/
-│   ├── package.json                      # React 18, Vite, Lucide-React, Recharts, Tailwind CSS
-│   ├── vite.config.ts                    # Vite build and dev server configuration
+│   ├── package.json                      # React 18, Vite, Lucide-React, Recharts, @supabase/supabase-js
+│   ├── vite.config.ts                    # Vite build with Rollup chunk optimization
 │   ├── tsconfig.json                     # Strict TypeScript compiler options
 │   ├── tailwind.config.js                # Tailwind CSS styling and theme tokens
 │   ├── index.html                        # HTML5 entry template
 │   └── src/
 │       ├── main.tsx                      # React root rendering entry point
-│       ├── index.css                     # Base Tailwind stylesheets
-│       ├── App.tsx                       # Main coordinated application shell
+│       ├── index.css                     # Base stylesheets
+│       ├── App.tsx                       # Lazy-loaded coordinated application shell
 │       ├── constants/
 │       │   └── initialState.ts           # Seed evaluation state, categories & order status constants
 │       ├── context/
 │       │   └── CampusKartContext.tsx     # Unified reactive state manager and custom hook (`useCampusKart`)
 │       ├── services/
-│       │   └── api.ts                    # Typed API client for backend integration
+│       │   ├── api.ts                    # Typed REST API client
+│       │   ├── supabaseClient.ts         # Singleton Supabase client configuration
+│       │   ├── supabaseService.ts        # Direct Supabase typed operations (orders, wallet, controls)
+│       │   └── index.ts                  # Clean barrel exports
 │       ├── types/
-│       │   └── campuskart.ts             # Domain models & TypeScript interfaces
+│       │   ├── campuskart.ts             # API interfaces
+│       │   └── ecosystem.ts              # Domain models & strict TypeScript interfaces
 │       ├── components/
-│       │   └── common/
-│       │       ├── ShaderBackground.tsx  # Dynamic interactive WebGL/Canvas2D mesh background
-│       │       ├── ProductArtwork.tsx    # Category-based SVG product artwork generator
-│       │       ├── ToastNotification.tsx # Non-blocking feedback toast system
-│       │       ├── ReceiptModal.tsx      # Official transaction & order receipt inspector
-│       │       ├── EvaluatorModal.tsx    # Evaluator guide, credentials & demo state reset modal
-│       │       └── EvaluatorBar.tsx      # Top ecosystem switcher bar for 4 portals
+│       │   └── common/                   # Shared UI (ShaderBackground, ReceiptModal, etc.)
 │       └── pages/
-│           ├── student/
-│           │   ├── StudentPortal.tsx     # Student sub-nav, quick-jump bar and screen router
-│           │   └── screens/              # 16 Dedicated Student screens (Welcome, Auth, Shop, Cart, Checkout, etc.)
-│           ├── parent/
-│           │   ├── ParentPortal.tsx      # Parent FinTech sub-nav and screen router
-│           │   └── screens/              # 14 Dedicated Parent screens (Funding, Limits, Analytics, Statements, etc.)
-│           ├── ops/
-│           │   ├── OpsPortal.tsx         # Operations control center and tab router
-│           │   └── screens/              # 5 Dedicated Ops screens (Overview, Orders, Inventory, Students, Ledger)
-│           └── college/
-│               ├── CollegePortal.tsx     # Institutional compliance and reporting router
-│               └── screens/              # 2 Dedicated College screens (Aggregated Overview, Reports)
+│           ├── student/                  # 16 Dedicated Student screens (Shop, Cart, Checkout, etc.)
+│           ├── parent/                   # 14 Dedicated Parent screens (Funding, Limits, Analytics, etc.)
+│           ├── ops/                      # 5 Dedicated Ops screens (Orders, Inventory, Reconciliation)
+│           └── college/                  # 2 Dedicated College screens (Aggregated Overview, Reports)
 │
+├── supabase/
+│   └── schema.sql                        # Production Supabase PostgreSQL schema with Row Level Security (RLS)
+├── docs/                                 # Authoritative documentation suite
+│   ├── context.md                        # Institutional domain context & paise precision
+│   ├── agents.md                         # 4 Agent personas, system prompts & permissions
+│   ├── suggestions.md                    # Engineering scaling & architecture recommendations
+│   ├── addons.md                         # Hardware kiosk, RFID/NFC & WhatsApp specifications
+│   ├── vulnerabilities.md                # Threat model, race conditions & RLS audit
+│   ├── logs.md                           # Changelog of milestones & transitions
+│   └── todo.md                           # Prioritized roadmap
 ├── .env.example                          # Environment variables template
 └── README.md
 ```
 
 ---
 
-## Running Locally
+## Quick Start (No Python Required)
 
-### 1. Start the Backend API Server
+### 1. Install Dependencies
 ```bash
-cd backend
-python server.py
-```
-*Runs on `http://127.0.0.1:8080` by default.*
+# Frontend
+cd frontend && npm install
 
-### 2. Run Backend Integration Tests
-```bash
-cd backend
-python test_backend.py
+# Backend
+cd ../backend && npm install
 ```
 
-### 3. Start Frontend Development Server
+### 2. Run the Frontend Development Server
+From root:
 ```bash
-cd frontend
-npm install
 npm run dev
 ```
-*Access the application at `http://localhost:5173`.*
+*Access the UI at `http://localhost:5173`.*
 
-### 4. Build Frontend for Production
+### 3. Run the TypeScript Backend Server (Optional)
 ```bash
-cd frontend
+npm run server
+```
+*Runs on `http://127.0.0.1:8080` powered by `tsx`.*
+
+### 4. Run the TypeScript Integration Test Suite
+```bash
+npm run test
+```
+*Runs `backend/test_backend.ts` validating all 18 endpoints, multi-portal roles, and atomic checkout.*
+
+### 5. Build Frontend for Production
+```bash
 npm run build
 ```
+
+---
+
+## Connecting Supabase Cloud
+
+Add your credentials to `.env` in the root:
+```env
+DATABASE_PROVIDER=supabase
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+Execute [`supabase/schema.sql`](file:///c:/Users/manit/OneDrive/Desktop/Projects/Vyoma/cKart/supabase/schema.sql) in your Supabase SQL Editor to provision tables, indexes, and Row Level Security policies.

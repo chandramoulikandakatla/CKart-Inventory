@@ -43,3 +43,19 @@ This log documents all technical actions, refactoring milestones, and architectu
   - Cloud Supabase PostgreSQL adapter via PostgREST and connection string parsing.
 - **Action**: Auto-discovery of database provider via `.env` configuration.
 - **Action**: Created authoritative documentation suite in `docs/` (`context.md`, `agents.md`, `suggestions.md`, `addons.md`, `vulnerabilities.md`, `logs.md`, `todo.md`).
+
+---
+
+## Milestone 5: 100% TypeScript / TSX Full-Stack Transition (Zero Python)
+- **Problem**: Python backend dependencies created environment fragmentation, cross-language friction, and maintenance overhead for a TypeScript/React team.
+- **Action**:
+  - Completely eradicated all Python source files (`.py`), Python virtual environments, SQLite binary files, `__pycache__`, and `requirements.txt` from the entire repository.
+  - Re-architected backend into 100% native TypeScript (`backend/server.ts`) powered by `tsx` and Node standard libraries (`node:http`, `node:crypto`).
+  - Integrated official `@supabase/supabase-js` TypeScript SDK directly in `frontend/src/services/` (`supabaseClient.ts`, `supabaseService.ts`, `index.ts`).
+  - Implemented end-to-end TypeScript integration test suite (`backend/test_backend.ts`) validating 100% of authentication, multi-portal roles, atomic checkout, idempotency deduplication, and privacy guarantees.
+  - Created root monorepo `package.json` uniting all frontend and backend scripts (`npm run dev`, `npm run server`, `npm run build`, `npm run test`).
+  - Established dedicated `supabase/schema.sql` for effortless cloud setup.
+- **Validation**:
+  - `npm run test` executes `backend/test_backend.ts` with 100% pass rate.
+  - `npm run build` runs `tsc -b && vite build` successfully with zero type or build errors.
+  - Zero `.py` files remain in the repository.

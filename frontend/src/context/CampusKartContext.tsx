@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { INITIAL_STATE } from '../constants/initialState';
 import { ToastData } from '../components/common/ToastNotification';
+import { isSupabaseConfigured, supabaseService } from '../services';
 import {
   EcosystemState,
   Student,
@@ -275,10 +276,25 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
   useEffect(() => {
     let mounted = true;
     const syncWithBackend = async () => {
+      // 1. If Supabase is configured, check availability
+      if (isSupabaseConfigured()) {
+        try {
+          const products = await supabaseService.getProducts();
+          if (mounted && products) {
+            setBackendConnected(true);
+            return;
+          }
+        } catch {
+          // fallback
+        }
+      }
+
+      // 2. Otherwise check local TypeScript API server
       try {
-        const res = await fetch('https://campuskart-api.example.com/api/health', { method: 'GET' });
+        const apiUrl = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_URL) || 'http://127.0.0.1:8080';
+        const res = await fetch(`${apiUrl}/api/health`, { method: 'GET' });
         if (mounted && res.ok) setBackendConnected(true);
-      } catch (err) {
+      } catch {
         if (mounted) setBackendConnected(false);
       }
     };

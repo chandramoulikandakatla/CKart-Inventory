@@ -26,7 +26,7 @@ A prioritized engineering task list for upcoming milestones on CampusKart.
   - Set up Playwright or Cypress tests verifying full student purchase flow from Login -> Add to Cart -> 5s Simulated Payment -> Receipt.
   - Automate test runs in GitHub Actions CI/CD workflow.
 - [ ] **Structured Logging & APM**:
-  - Replace `print()` statements in `server.py` with structured JSON logging (`structlog` or standard `logging`) including request ID, latency, user role, and status code.
+  - Replace `console.log()` statements in `backend/server.ts` with structured JSON logging (e.g. `pino` or `winston` in TypeScript) including request ID, latency, user role, and status code.
 
 ---
 
