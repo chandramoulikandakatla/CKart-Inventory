@@ -74,7 +74,7 @@ export const StudentWalletScreen: React.FC = () => {
                           <td className="py-3 px-3 text-stone-600">
                             {t.note} {t.relatedOrderId && <span className="font-mono text-orange-600">({t.relatedOrderId})</span>}
                           </td>
-                          <td className={`py-3 px-3 text-right font-bold ${t.amount > 0 ? 'text-emerald-700' : 'text-white'}`}>
+                          <td className={`py-3 px-3 text-right font-bold ${t.amount > 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
                             {t.amount > 0 ? `+₹${t.amount}` : `-₹${Math.abs(t.amount)}`}
                           </td>
                           <td className="py-3 px-3 text-right font-mono text-[#3D251A]">₹{t.newBalance}</td>

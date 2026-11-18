@@ -1,4 +1,5 @@
 import React from 'react';
+import { ArrowLeft, ShoppingBag } from 'lucide-react';
 import { ORDER_STATUS_STEPS } from '../../../constants/initialState';
 import { useCampusKart } from '../../../context/CampusKartContext';
 
@@ -9,16 +10,41 @@ export const StudentOrderTrackingScreen: React.FC = () => {
     trackingOrderId,
     setTrackingOrderId,
     setOpsScreen,
+    setStudentScreen,
     studentOrders,
   } = useCampusKart();
 
-            const ord = ecosystem.orders.find(o => o.id === trackingOrderId) || studentOrders[0];
-            if (!ord) return null;
-            const currentStepIdx = Math.max(0, ORDER_STATUS_STEPS.indexOf(ord.status));
+  const ord = ecosystem.orders.find(o => o.id === trackingOrderId) || studentOrders[0];
+  if (!ord) {
+    return (
+      <div className="max-w-md mx-auto text-center py-16 px-4 space-y-4">
+        <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 mx-auto flex items-center justify-center">
+          <ShoppingBag className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-[#2C1A12]">No Active Orders to Track</h2>
+        <p className="text-xs text-stone-600">You don't have any orders in the delivery pipeline. Place an order to watch live fulfillment progress!</p>
+        <button
+          onClick={() => setStudentScreen('shop')}
+          className="px-6 py-2.5 rounded-xl bg-orange-600 text-white font-semibold text-xs hover:bg-orange-700 transition-colors shadow-sm"
+        >
+          Browse Catalogue
+        </button>
+      </div>
+    );
+  }
+  const currentStepIdx = Math.max(0, ORDER_STATUS_STEPS.indexOf(ord.status));
 
-            return (
-              <div className="max-w-3xl mx-auto bg-white/90 backdrop-blur-xl shadow-[0_10px_30px_-6px_rgba(44,26,18,0.07)] border border-stone-200/90 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200/80 pb-4">
+  return (
+    <div className="max-w-3xl mx-auto bg-white/90 backdrop-blur-xl shadow-[0_10px_30px_-6px_rgba(44,26,18,0.07)] border border-stone-200/90 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => setStudentScreen('my_orders')}
+          className="inline-flex items-center gap-1.5 text-xs text-stone-600 hover:text-stone-900 font-medium py-1 px-2.5 rounded-lg hover:bg-stone-100 transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" /> Back to My Orders
+        </button>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200/80 pb-4">
                   <div>
                     <span className="text-[10px] font-mono uppercase tracking-widest text-orange-600">Live Fulfilment Tracker</span>
                     <h2 className="text-xl font-extrabold text-[#2C1A12]">Order {ord.id}</h2>

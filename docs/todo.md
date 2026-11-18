@@ -21,14 +21,14 @@ A prioritized engineering task list for upcoming milestones on CampusKart, track
 
 ## High Priority (Immediate Next Steps)
 
+- [x] **API Endpoint Rate Limiting (Completed)**:
+  - Enforced sliding-window pre-auth tracking in `backend/src/services/authService.ts`.
+  - Automated lockout of `pre_auth_token` after 5 failed PIN attempts, mitigating brute-force enumeration.
+- [x] **CORS Strict Origin Reflection (Completed)**:
+  - Dynamically validates incoming `Origin` headers against localhost, 127.0.0.1, and authorized domains in `backend/src/utils/http.ts` and `router.ts`.
 - [ ] **Supabase Cloud Provisioning**:
   - Once user credentials are provided in `.env`, run `supabase/schema.sql` in Supabase SQL Editor.
   - Verify live PostgREST and PostgreSQL connection pooling with Supabase client.
-- [ ] **API Endpoint Rate Limiting**:
-  - Add in-memory sliding-window rate limiter for sensitive authentication endpoints (`/api/auth/login`, `/api/auth/verify-pin`, `/api/parent/auth/login`).
-  - Block automated brute-force attempts on 4-digit PINs (lock out after 5 consecutive failed attempts).
-- [ ] **CORS Strict Domain Binding**:
-  - Read `ALLOWED_ORIGINS` from `.env` to restrict cross-origin requests to authorized institutional domains and dev ports (`http://localhost:5173`).
 
 ---
 

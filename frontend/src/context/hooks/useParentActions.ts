@@ -86,7 +86,8 @@ export function useParentActions(params: ParentActionParams) {
     }, 3100);
 
     setTimeout(() => {
-      const nowStr = '2026-11-16 ' + new Date().toTimeString().slice(0, 5);
+      const now = new Date();
+      const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
       const txnId = `TXN-CK-${Math.floor(90100 + Math.random() * 899)}`;
       const prevBalPaise = Math.round(parentLinkedStudent.walletBalance * 100);
       const addPaise = Math.round(amt * 100);

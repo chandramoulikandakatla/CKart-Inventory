@@ -277,7 +277,8 @@ export function useStudentActions(params: StudentActionParams) {
 
     setTimeout(() => {
       if (simulateFailureMode) return;
-      const nowStr = '2026-11-16 ' + new Date().toTimeString().slice(0, 5);
+      const now = new Date();
+      const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
       const orderId = `ORD-2026-${Math.floor(8810 + Math.random() * 180)}`;
       const txnId = `TXN-CK-${Math.floor(90025 + Math.random() * 900)}`;
       const constidemKey = activeIdempotencyKey || `IDEM-${Date.now()}`;

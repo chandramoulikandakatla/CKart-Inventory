@@ -6,7 +6,7 @@ import crypto from 'node:crypto';
 import type { SessionData } from '../types.js';
 
 export const activeTokens = new Map<string, SessionData>();
-export const preAuthTokens = new Map<string, { studentId: string; expiresAt: number }>();
+export const preAuthTokens = new Map<string, { studentId: string; expiresAt: number; attempts?: number }>();
 
 export function generateToken(
   role: SessionData['role'],

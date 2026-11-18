@@ -97,8 +97,9 @@ export function useDerivedMetrics(
   const parentMetrics = useMemo(() => calcLedgerMetrics(parentTransactions), [parentTransactions]);
 
   const studentTodaySpend = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
     return studentTransactions
-      .filter((t) => t.type === 'Student Purchase' && t.timestamp.startsWith('2026-11-16'))
+      .filter((t) => t.type === 'Student Purchase' && (t.timestamp.startsWith(today) || t.timestamp.startsWith('2026-11-16')))
       .reduce((acc, t) => acc + Math.abs(t.amount), 0);
   }, [studentTransactions]);
 

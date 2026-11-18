@@ -48,9 +48,15 @@ export const authService = {
       return { status: 401, error: 'Pre-auth token expired or invalid' };
     }
 
+    preAuth.attempts = (preAuth.attempts || 0) + 1;
+    if (preAuth.attempts > 5) {
+      preAuthTokens.delete(pre_auth_token);
+      return { status: 429, error: 'Too many failed PIN attempts. Pre-authentication session locked.' };
+    }
+
     const student = store.students.find((s) => s.id === preAuth.studentId);
     if (!student || !verifySecret(pin, student.pin_hash)) {
-      return { status: 401, error: 'Incorrect 4-digit PIN' };
+      return { status: 401, error: `Incorrect 4-digit PIN. (${5 - preAuth.attempts} attempts remaining)` };
     }
 
     preAuthTokens.delete(pre_auth_token);

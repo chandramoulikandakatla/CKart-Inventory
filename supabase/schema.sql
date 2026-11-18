@@ -121,6 +121,9 @@ CREATE TABLE notifications (
 );
 
 -- Enable Row Level Security (RLS)
+ALTER TABLE colleges ENABLE ROW LEVEL SECURITY;
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE students ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wallet_transactions ENABLE ROW LEVEL SECURITY;
@@ -128,6 +131,14 @@ ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE spending_controls ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+-- Public Catalog Policies
+CREATE POLICY "public_read_colleges" ON colleges FOR SELECT USING (true);
+CREATE POLICY "public_read_categories" ON categories FOR SELECT USING (true);
+CREATE POLICY "public_read_products" ON products FOR SELECT USING (is_active = true);
+CREATE POLICY "ops_manage_products" ON products FOR ALL USING (
+    EXISTS (SELECT 1 FROM staff WHERE auth_user_id = auth.uid() AND role IN ('ops', 'admin'))
+);
 
 -- Student Isolation Policies (Students can only read their own records)
 CREATE POLICY "student_read_own_profile" ON students FOR SELECT USING (auth.uid() = auth_user_id);

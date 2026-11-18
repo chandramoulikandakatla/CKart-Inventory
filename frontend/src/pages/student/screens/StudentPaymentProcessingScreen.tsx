@@ -44,19 +44,19 @@ export const StudentPaymentProcessingScreen: React.FC = () => {
                   <div className="space-y-2.5 text-left bg-[#F4EFEA] p-4 rounded-2xl border border-stone-200/80 text-xs">
                     <div className="flex items-center gap-2.5">
                       <CheckCircle2 className={`w-4 h-4 ${studentPayStep >= 1 ? 'text-emerald-700' : 'text-slate-600'}`} />
-                      <span className={studentPayStep >= 1 ? 'text-white font-medium' : 'text-slate-500'}>
+                      <span className={studentPayStep >= 1 ? 'text-stone-900 font-semibold' : 'text-slate-500'}>
                         Step 1 (0–1s): Initiate CampusKart Wallet transaction
                       </span>
                     </div>
                     <div className="flex items-center gap-2.5">
                       <CheckCircle2 className={`w-4 h-4 ${studentPayStep >= 2 ? 'text-emerald-700' : 'text-slate-600'}`} />
-                      <span className={studentPayStep >= 2 ? 'text-white font-medium' : 'text-slate-500'}>
+                      <span className={studentPayStep >= 2 ? 'text-stone-900 font-semibold' : 'text-slate-500'}>
                         Step 2 (1–3s): Validate ₹{cartFinalPayable} against balance & spending limits
                       </span>
                     </div>
                     <div className="flex items-center gap-2.5">
                       <CheckCircle2 className={`w-4 h-4 ${studentPayStep >= 3 ? 'text-emerald-700' : 'text-slate-600'}`} />
-                      <span className={studentPayStep >= 3 ? 'text-white font-medium' : 'text-slate-500'}>
+                      <span className={studentPayStep >= 3 ? 'text-stone-900 font-semibold' : 'text-slate-500'}>
                         Step 3 (3–5s): Commit ledger debit & dispatch order to Operations
                       </span>
                     </div>

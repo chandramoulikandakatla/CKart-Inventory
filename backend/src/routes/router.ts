@@ -5,16 +5,18 @@
 import http from 'node:http';
 import { DATA_FILE, SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { store } from '../store/index.js';
-import { parseJsonBody, sendJson, getAuthHeader } from '../utils/index.js';
+import { parseJsonBody, sendJson, getAuthHeader, getCorsOrigin } from '../utils/index.js';
 import { authService, productService, walletService, orderService, opsService } from '../services/index.js';
 
 export async function handleApiRequest(req: http.IncomingMessage, res: http.ServerResponse) {
   // CORS Preflight
   if (req.method === 'OPTIONS') {
+    const origin = req.headers.origin as string | undefined;
     res.writeHead(204, {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': getCorsOrigin(origin),
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
+      'Access-Control-Max-Age': '86400',
     });
     res.end();
     return;

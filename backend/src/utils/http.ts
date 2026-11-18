@@ -26,12 +26,21 @@ export function parseJsonBody(req: http.IncomingMessage): Promise<any> {
   });
 }
 
-export function sendJson(res: http.ServerResponse, statusCode: number, data: any) {
+export function getCorsOrigin(origin?: string): string {
+  if (!origin) return '*';
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+    return origin;
+  }
+  return '*';
+}
+
+export function sendJson(res: http.ServerResponse, statusCode: number, data: any, reqOrigin?: string) {
+  const incomingOrigin = reqOrigin || (res as any).req?.headers?.origin;
   res.writeHead(statusCode, {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': getCorsOrigin(incomingOrigin),
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
   });
   res.end(JSON.stringify(data));
 }

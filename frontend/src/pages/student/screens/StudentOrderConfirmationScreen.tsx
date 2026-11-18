@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Wallet, CheckCircle2, Truck, FileText
+  Wallet, CheckCircle2, Truck, FileText, ShoppingBag
 } from 'lucide-react';
 import { useCampusKart } from '../../../context/CampusKartContext';
 
@@ -13,8 +13,24 @@ export const StudentOrderConfirmationScreen: React.FC = () => {
     studentOrders,
   } = useCampusKart();
 
-            const ord = lastConfirmedOrder || studentOrders[0];
-            if (!ord) return null;
+  const ord = lastConfirmedOrder || studentOrders[0];
+  if (!ord) {
+    return (
+      <div className="max-w-md mx-auto text-center py-16 px-4 space-y-4">
+        <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 mx-auto flex items-center justify-center">
+          <ShoppingBag className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-[#2C1A12]">No Recent Orders Found</h2>
+        <p className="text-xs text-stone-600">You don't have any placed orders yet. Explore our campus catalog to place your first order!</p>
+        <button
+          onClick={() => setStudentScreen('shop')}
+          className="px-6 py-2.5 rounded-xl bg-orange-600 text-white font-semibold text-xs hover:bg-orange-700 transition-colors shadow-sm"
+        >
+          Browse Campus Catalogue
+        </button>
+      </div>
+    );
+  }
             return (
               <div className="max-w-2xl mx-auto bg-white/90 backdrop-blur-xl shadow-[0_10px_30px_-6px_rgba(44,26,18,0.07)] border border-cyan-300/80 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
                 <div className="text-center space-y-2">

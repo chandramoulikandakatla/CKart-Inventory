@@ -98,3 +98,27 @@ This log documents all technical actions, refactoring milestones, and architectu
   - Zero files over 460 lines remain across the entire codebase.
   - `npm run test` executes all integration tests with 100% pass rate.
   - `npm run build` passes with zero TypeScript warnings or errors.
+
+---
+
+## Milestone 7: Comprehensive Application, UI & Security Audit
+- **Action**: Full static and dynamic audit across all 4 portals (Student, Parent, Operations, College) and 43 screen/component files.
+- **Button & Handler Verification**:
+  - Audited all 125 `<button>` elements in the application.
+  - Verified 0 dead buttons; every button links to an active mutation, navigation, or form submission handler.
+- **Bugs Uncovered & Patched**:
+  - Fixed hardcoded date `'2026-11-16'` in `useDerivedMetrics.ts` that previously allowed real orders to bypass daily spending limits.
+  - Fixed static date formatting in `useStudentActions.ts` and `useParentActions.ts` to generate dynamic ISO timestamps.
+  - Fixed white-on-white text contrast bug in `StudentWalletScreen.tsx` for debit transactions.
+  - Fixed low-contrast text in `StudentPaymentProcessingScreen.tsx` for step indicator labels.
+  - Replaced `return null` blank screen states in `StudentOrderConfirmationScreen.tsx` and `StudentOrderTrackingScreen.tsx` with friendly empty state cards.
+  - Added internal `<ArrowLeft /> Back to My Orders` button to `StudentOrderTrackingScreen.tsx` to eliminate UX dead-end.
+- **Security & Hardening Patches**:
+  - Implemented PIN brute-force defense in `backend/src/services/authService.ts` (max 5 failed attempts locks session and returns HTTP 429).
+  - Hardened CORS in `backend/src/utils/http.ts` and `router.ts` with dynamic origin reflection for trusted localhost/development origins instead of permissive wildcard `*`.
+  - Added Row Level Security (RLS) policies for `products`, `categories`, and `colleges` to `supabase/schema.sql`.
+  - Identified plaintext credential storage in demo `localStorage` and mapped out production Supabase Auth migration.
+- **Verification**:
+  - `npx tsx test_audit_fixes.ts`: 100% passed (PIN lockout + CORS).
+  - `npx tsx test_ecosystem_audit.ts`: 100% passed (All 7 portal state transitions).
+  - Production frontend build `npm --prefix frontend run build`: 2,275 modules transformed in 16.20s with zero errors.
