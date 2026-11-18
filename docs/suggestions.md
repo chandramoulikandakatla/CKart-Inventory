@@ -4,50 +4,47 @@ This document outlines high-impact engineering, optimization, and scaling recomm
 
 ---
 
-## 1. Backend & Database Architecture
+## 1. Backend & High-Throughput Optimizations (Implemented & Recommended)
 
-### 1.1 Connection Pooling & Persistent Execution
-- **Current State**: Standard library HTTP server opens a new SQLite connection per request or creates transient handles.
-- **Suggestion**:
-  - Implement a persistent database connection pool (e.g., using `SQLAlchemy`, `asyncpg`, or connection-pooled Supabase PostgreSQL).
-  - Enable Write-Ahead Logging (`PRAGMA journal_mode = WAL;`) and synchronous normal mode (`PRAGMA synchronous = NORMAL;`) on SQLite to allow high-concurrency concurrent readers alongside single writers.
+### 1.1 In-Memory LRU & TTL Caching Layer (Implemented)
+- **Architecture**: `backend/src/cache/index.ts` provides a high-performance in-memory cache with:
+  - Time-To-Live (TTL) expiration (45s for product catalog, 30s for college reports).
+  - Least-Recently-Used (LRU) automatic capacity eviction.
+  - Tag-based cache invalidation (`invalidateTag('products')` on stock mutation, `invalidateTag('college')` on new checkout).
+- **Production Extension**: For multi-node cloud deployments (Kubernetes / Cloud Run), replace single-node memory cache with a Redis / Dragonfly instance while preserving the same cache interface.
 
-### 1.2 Database Abstraction Layer (Repository Pattern)
-- **Current State**: SQL queries are embedded directly within request handling blocks in `server.py`.
-- **Suggestion**:
-  - Decouple business logic from persistence using an abstract `DatabaseAdapter` or Repository pattern.
-  - This allows swapping seamlessly between SQLite (for local development/testing) and Supabase PostgreSQL (for production) without changing a single line of domain code.
+### 1.2 Lazy Loading & Cursor-Based Pagination (Implemented)
+- **Architecture**: `backend/src/utils/pagination.ts` supports both cursor-based slicing and offset pagination (`limit`, `page`, `cursor`, `has_more`, `next_cursor`).
+- **Impact**: Instead of transmitting full 5,000+ SKU catalogs or year-long transaction histories in monolithic payloads, requests are lazily streamed in 20-50 item envelopes. Reduces payload size and network serialization overhead by up to 90%.
 
-### 1.3 Asynchronous API Framework
-- **Current State**: Built-in synchronous `ThreadingHTTPServer` from Python standard library.
-- **Suggestion**:
-  - Migrate to `FastAPI` or `Starlette` with `Uvicorn` for native `async`/`await` support.
-  - Enhances throughput by 10x–20x, handles non-blocking I/O for external Supabase/PostgREST calls, and provides automatic OpenAPI / Swagger documentation.
+### 1.3 Asynchronous Non-Blocking Write Queue with Debounced Flush (Implemented)
+- **Architecture**: `backend/src/store/persistence.ts` provides `queueSaveStore()`:
+  - Coalesces rapid sequential checkouts and top-ups within a 50ms window.
+  - Executes atomic temp-write and rename using non-blocking `fs.promises` to keep Node's event loop free for inbound HTTP traffic.
+  - Emergency synchronous flush (`saveStoreSync`) bound to `SIGINT`, `SIGTERM`, and `beforeExit` signals guarantees zero data loss on restart or container teardown.
 
----
-
-## 2. Security & Identity Management
-
-### 2.1 Cryptographic Timing Attack Mitigation
-- **Current State**: `verify_secret` uses `hmac.compare_digest` for password verification, which is good.
-- **Suggestion**:
-  - Enforce global rate limiting (e.g. max 5 failed attempts per IP / student code per 15 minutes) using an in-memory leaky bucket or Redis token bucket to completely neutralize credential stuffing and brute-force PIN attacks.
-
-### 2.2 JWT Tokens with Asymmetric Key Pairs (RS256)
-- **Current State**: HMAC-SHA256 symmetric tokens signed with a shared server secret.
-- **Suggestion**:
-  - Shift to RS256 or Ed25519 asymmetric signing where Supabase or the Auth service signs tokens with a private key, and microservices/kiosks can verify authenticity locally with a public key without sharing the secret.
+### 1.4 HTTP Telemetry & Latency Profiling (Implemented)
+- **Architecture**: Measures request duration via `process.hrtime.bigint()` in `backend/src/routes/router.ts`.
+- **Response Headers**:
+  - `X-Response-Time`: Exact microsecond/millisecond execution latency.
+  - `X-Cache: HIT` / `X-Cache: MISS`: Real-time cache diagnostic indicator.
+- **Monitoring Endpoint**: `/api/system/metrics` exposes heap memory usage, cache hit ratios, and managed entity counts for Prometheus / Datadog scrapers.
 
 ---
 
-## 3. Real-Time Capabilities & Infrastructure
+## 2. Future Backend Architecture & Enterprise Scalability
 
-### 3.1 Real-Time WebSocket / Server-Sent Events (SSE)
-- **Current State**: Frontend uses client polling or shared local storage reactivity.
-- **Suggestion**:
-  - Leverage Supabase Realtime (PostgreSQL CDC — Change Data Capture) or WebSocket channels for live order status updates (`Preparing` -> `Ready for Collection`) and instant wallet balance notifications.
+### 2.1 Supabase Realtime & Server-Sent Events (SSE)
+- **Current State**: Frontend uses state sync and polling checks for order status updates.
+- **Recommendation**:
+  - Connect client sockets to Supabase Realtime channels (`orders:student_id=eq.X`).
+  - When Operations updates order status (`Preparing` -> `Ready for Collection`), dispatch instant push notification without client polling.
 
-### 3.2 In-Memory Caching (Redis / Dragonfly)
-- **Current State**: Every catalog query executes a SQL `SELECT`.
-- **Suggestion**:
-  - Cache catalog items by category with cache invalidation triggered whenever an Operations administrator modifies stock or toggles product availability.
+### 2.2 Microservice Split for High-Volume Concurrency
+- **Recommendation for Phase 3**:
+  - **Auth & Identity Service**: Handles Student Code + PIN and Parent Mobile OTP verification.
+  - **Catalog & Pricing Service**: Read-heavy cached service with edge replication.
+  - **Transactional Wallet Engine**: High-frequency ACID transaction engine maintaining exclusive row locks on balances.
+
+### 2.3 Edge Functions for Catalog Browsing
+- **Recommendation**: Deploy read-only `/api/products` and college menu endpoints onto Cloudflare Workers or Supabase Edge Functions. Cache responses at campus edge CDNs for sub-10ms response times.

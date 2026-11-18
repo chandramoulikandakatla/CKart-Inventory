@@ -49,4 +49,23 @@ This document catalogs high-value extensions, hardware peripherals, and external
 ### 3.2 Recurring Auto-Top-Up (e-Mandate)
 - **Concept**: Automated parental standing instructions.
 - **Functionality**:
+  - Parents authorize an NPCI e-Mandate or recurring card subscription.
+  - When the student's balance dips below a threshold (e.g. ₹150.00), the backend triggers an automated top-up without parental manual intervention.
+
+---
+
+## 4. Backend Performance & Caching Add-Ons
+
+### 4.1 Distributed In-Memory Cache (Redis / Valkey / Dragonfly)
+- **Concept**: Cloud-native shared cache layer extending `backend/src/cache/index.ts`.
+- **Functionality**:
+  - Connects multiple stateless backend replicas to a centralized low-latency cache.
+  - Supports pub/sub tag invalidations across the cluster when operations modify inventory or order fulfillment statuses.
+
+### 4.2 Supabase Realtime CDC (Change Data Capture) Dispatcher
+- **Concept**: Instant bi-directional push to student and parent clients.
+- **Functionality**:
+  - Listens to PostgreSQL `INSERT` / `UPDATE` triggers on `orders` and `wallets`.
+  - Pushes live updates directly to student mobile view and parent dashboards via WebSockets, eliminating client polling loops.
+- **Functionality**:
   - If a student's wallet balance drops below ₹150, trigger an automatic ₹500 top-up from the parent's linked bank account via NPCI e-Mandate or credit card tokenization.

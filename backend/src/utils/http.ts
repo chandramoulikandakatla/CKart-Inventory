@@ -34,14 +34,32 @@ export function getCorsOrigin(origin?: string): string {
   return '*';
 }
 
-export function sendJson(res: http.ServerResponse, statusCode: number, data: any, reqOrigin?: string) {
-  const incomingOrigin = reqOrigin || (res as any).req?.headers?.origin;
-  res.writeHead(statusCode, {
+export function sendJson(
+  res: http.ServerResponse,
+  statusCode: number,
+  data: any,
+  options?: { reqOrigin?: string; cached?: boolean; customHeaders?: Record<string, string> }
+) {
+  const req = (res as any).req;
+  const incomingOrigin = options?.reqOrigin || req?.headers?.origin;
+
+  let responseTimeMs: string | undefined;
+  if (req?._startTime) {
+    const diff = Number(process.hrtime.bigint() - req._startTime) / 1e6;
+    responseTimeMs = `${diff.toFixed(2)}ms`;
+  }
+
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': getCorsOrigin(incomingOrigin),
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
-  });
+    ...(responseTimeMs ? { 'X-Response-Time': responseTimeMs } : {}),
+    ...(options?.cached !== undefined ? { 'X-Cache': options.cached ? 'HIT' : 'MISS' } : {}),
+    ...(options?.customHeaders || {}),
+  };
+
+  res.writeHead(statusCode, headers);
   res.end(JSON.stringify(data));
 }
 

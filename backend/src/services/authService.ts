@@ -5,6 +5,7 @@
 import crypto from 'node:crypto';
 import { store } from '../store/index.js';
 import { verifySecret, generateToken, verifyToken, preAuthTokens } from '../security/index.js';
+import { metricsCache } from '../cache/index.js';
 
 export const authService = {
   studentLoginStep1(body: { student_code?: string; password?: string }) {
@@ -190,19 +191,30 @@ export const authService = {
       return { status: 403, error: 'Unauthorized: College authority access only' };
     }
 
+    const cacheKey = `college_dashboard:${session.entityId}`;
+    const cached = metricsCache.get(cacheKey);
+    if (cached) {
+      return { status: 200, data: cached, cached: true };
+    }
+
     const totalOrders = store.orders.length;
     const totalVolumePaise = store.orders.reduce((sum, o) => sum + o.total_amount_paise, 0);
 
+    const payload = {
+      kpis: {
+        total_orders: totalOrders,
+        total_gross_paise: totalVolumePaise,
+        active_students: store.students.length,
+      },
+      colleges: store.colleges,
+    };
+
+    metricsCache.set(cacheKey, payload, 30000, ['college']);
+
     return {
       status: 200,
-      data: {
-        kpis: {
-          total_orders: totalOrders,
-          total_gross_paise: totalVolumePaise,
-          active_students: store.students.length,
-        },
-        colleges: store.colleges,
-      },
+      data: payload,
+      cached: false,
     };
   },
 };

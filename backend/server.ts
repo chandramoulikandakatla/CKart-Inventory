@@ -22,4 +22,17 @@ if (process.argv[1] && process.argv[1].endsWith('server.ts')) {
     console.log(`[CampusKart] Database Provider: ${SUPABASE_URL ? 'Supabase' : 'File-Backed TypeScript Engine'}`);
     console.log(`[CampusKart] Persistent Storage: ${DATA_FILE}`);
   });
+
+  // Graceful shutdown handling
+  const shutdown = (signal: string) => {
+    console.log(`\n[CampusKart] Received ${signal}. Flushing store and closing server gracefully...`);
+    saveStore(store);
+    server.close(() => {
+      console.log('[CampusKart] Server closed cleanly.');
+      process.exit(0);
+    });
+  };
+
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
 }

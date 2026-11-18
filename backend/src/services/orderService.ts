@@ -4,6 +4,7 @@
 
 import { store, saveStore } from '../store/index.js';
 import { verifyToken } from '../security/index.js';
+import { productCache, metricsCache } from '../cache/index.js';
 
 export const orderService = {
   checkout(token: string | null, body: any) {
@@ -147,6 +148,8 @@ export const orderService = {
     });
 
     saveStore(store);
+    productCache.invalidateTag('products');
+    metricsCache.invalidateTag('college');
 
     return {
       status: 200,
@@ -168,6 +171,8 @@ export const orderService = {
         .filter((n) => n.student_id === session.entityId)
         .forEach((n) => (n.is_read = true));
       saveStore(store);
+    productCache.invalidateTag('products');
+    metricsCache.invalidateTag('college');
     }
     return { status: 200, data: { ok: true } };
   },

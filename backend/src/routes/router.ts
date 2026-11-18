@@ -7,8 +7,11 @@ import { DATA_FILE, SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { store } from '../store/index.js';
 import { parseJsonBody, sendJson, getAuthHeader, getCorsOrigin } from '../utils/index.js';
 import { authService, productService, walletService, orderService, opsService } from '../services/index.js';
+import { productCache, metricsCache } from '../cache/index.js';
 
 export async function handleApiRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+  (req as any)._startTime = process.hrtime.bigint();
+
   // CORS Preflight
   if (req.method === 'OPTIONS') {
     const origin = req.headers.origin as string | undefined;
@@ -72,14 +75,41 @@ export async function handleApiRequest(req: http.IncomingMessage, res: http.Serv
       return sendJson(res, resData.status, resData.data || { error: resData.error });
     }
 
-    // 3. Products
+    // 3. Products (with search, category filter, sorting & lazy pagination)
     if (pathname === '/api/products' && method === 'GET') {
       const resData = productService.getProducts({
         search: parsedUrl.searchParams.get('search'),
         category: parsedUrl.searchParams.get('category'),
         sort: parsedUrl.searchParams.get('sort'),
+        page: parsedUrl.searchParams.get('page'),
+        limit: parsedUrl.searchParams.get('limit'),
+        cursor: parsedUrl.searchParams.get('cursor'),
       });
-      return sendJson(res, resData.status, resData.data);
+      return sendJson(res, resData.status, resData.data, { cached: resData.cached });
+    }
+
+    // System Telemetry, Memory & Cache Performance
+    if (pathname === '/api/system/metrics' && method === 'GET') {
+      const mem = process.memoryUsage();
+      return sendJson(res, 200, {
+        uptime_seconds: Math.floor(process.uptime()),
+        memory: {
+          heap_used_mb: (mem.heapUsed / 1024 / 1024).toFixed(2),
+          heap_total_mb: (mem.heapTotal / 1024 / 1024).toFixed(2),
+          rss_mb: (mem.rss / 1024 / 1024).toFixed(2),
+        },
+        caches: {
+          products: productCache.getMetrics(),
+          metrics: metricsCache.getMetrics(),
+        },
+        counts: {
+          products: store.products.length,
+          orders: store.orders.length,
+          transactions: store.transactions.length,
+          students: store.students.length,
+        },
+        timestamp: new Date().toISOString(),
+      });
     }
 
     // 4. Dashboards
@@ -100,7 +130,7 @@ export async function handleApiRequest(req: http.IncomingMessage, res: http.Serv
 
     if (pathname === '/api/college/dashboard' && method === 'GET') {
       const resData = authService.getCollegeDashboard(token);
-      return sendJson(res, resData.status, resData.data || { error: resData.error });
+      return sendJson(res, resData.status, resData.data || { error: resData.error }, { cached: (resData as any).cached });
     }
 
     // 5. Wallet & Spending Controls

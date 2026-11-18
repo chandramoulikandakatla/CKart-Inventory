@@ -4,6 +4,7 @@
 
 import { store, saveStore } from '../store/index.js';
 import { verifyToken, hashSecret } from '../security/index.js';
+import { productCache } from '../cache/index.js';
 
 export const opsService = {
   getDashboard(token: string | null) {
@@ -192,6 +193,7 @@ export const opsService = {
       if (description !== undefined) product.description = description;
 
       saveStore(store);
+      productCache.invalidateTag('products');
       return { status: 200, data: { success: true, product } };
     }
 
@@ -209,6 +211,7 @@ export const opsService = {
     store.products.push(newProduct);
 
     saveStore(store);
+    productCache.invalidateTag('products');
     return { status: 201, data: { success: true, product: newProduct } };
   },
 };
