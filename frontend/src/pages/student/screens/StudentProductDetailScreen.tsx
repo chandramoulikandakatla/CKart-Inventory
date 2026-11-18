@@ -39,7 +39,7 @@ export const StudentProductDetailScreen: React.FC = () => {
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-8 items-center">
-                  <ProductArtwork category={product.category} id={product.id} className="w-full h-64 sm:h-72" />
+                  <ProductArtwork category={product.category} id={product.id} imageUrl={product.imageUrl} name={product.name} className="w-full h-64 sm:h-72" />
 
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">

@@ -34,10 +34,11 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
   // 1. Ecosystem Shared State
   const [ecosystem, setEcosystem] = useState<EcosystemState>(() => {
     try {
-      const saved = localStorage.getItem('campuskart_ecosystem_v4_clean');
+      localStorage.removeItem('campuskart_ecosystem_v4_clean'); // Purge legacy catalog cache
+      const saved = localStorage.getItem('campuskart_ecosystem_v5_catalog');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed?.students && parsed?.products && parsed?.transactions) {
+        if (parsed?.students && parsed?.products && parsed?.transactions && parsed.products.length >= 70) {
           return parsed;
         }
       }
@@ -49,7 +50,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
 
   useEffect(() => {
     try {
-      localStorage.setItem('campuskart_ecosystem_v4_clean', JSON.stringify(ecosystem));
+      localStorage.setItem('campuskart_ecosystem_v5_catalog', JSON.stringify(ecosystem));
     } catch {
       // Ignore storage error
     }
@@ -313,7 +314,7 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
     setParentAuthed(false);
     setParentScreen('welcome');
     try {
-      localStorage.removeItem('campuskart_ecosystem_v4_clean');
+      localStorage.removeItem('campuskart_ecosystem_v5_catalog');
       localStorage.removeItem('campuskart_student_screen');
       localStorage.removeItem('campuskart_logged_student_id');
       localStorage.removeItem('campuskart_student_authed');

@@ -163,7 +163,7 @@ export const StudentHomeScreen: React.FC = () => {
                     >
                       <div>
                         <div className="cursor-pointer" onClick={() => handleOpenProductDetail(prod.id)}>
-                          <ProductArtwork category={prod.category} id={prod.id} className="w-full h-32" />
+                          <ProductArtwork category={prod.category} id={prod.id} imageUrl={prod.imageUrl} name={prod.name} className="w-full h-32" />
                         </div>
                         <div className="flex items-center justify-between mt-3">
                           <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-[#F5F0EB]/90 text-stone-600">

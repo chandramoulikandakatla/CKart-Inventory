@@ -57,7 +57,7 @@ export const StudentCartScreen: React.FC = () => {
                         className="bg-white/90 backdrop-blur-xl shadow-[0_10px_30px_-6px_rgba(44,26,18,0.07)] border border-stone-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
                       >
                         <div className="flex items-center gap-3.5">
-                          <ProductArtwork category={item.category} id={item.id} className="w-20 h-20 shrink-0" />
+                          <ProductArtwork category={item.category} id={item.id} imageUrl={item.imageUrl} name={item.name} className="w-20 h-20 shrink-0" />
                           <div>
                             <span className="text-[10px] text-orange-600 font-medium">{item.category}</span>
                             <h3 className="text-sm font-bold text-[#2C1A12]">{item.name}</h3>

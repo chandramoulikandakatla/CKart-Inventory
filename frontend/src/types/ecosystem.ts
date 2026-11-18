@@ -99,6 +99,7 @@ export interface Product {
   frequent?: boolean;
   offerTag?: string;
   description: string;
+  imageUrl?: string;
 }
 
 export interface CartItem {

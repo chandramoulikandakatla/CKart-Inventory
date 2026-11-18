@@ -53,7 +53,7 @@ async function runOptimizationsTests() {
     productCache.clear();
     
     // First call: Cache MISS
-    const missRes = await fetch('http://127.0.0.1:4098/api/products?category=Stationery');
+    const missRes = await fetch('http://127.0.0.1:4098/api/products?category=Chips');
     const missCacheHeader = missRes.headers.get('X-Cache');
     const missTime = missRes.headers.get('X-Response-Time');
     if (missCacheHeader !== 'MISS') {
@@ -62,7 +62,7 @@ async function runOptimizationsTests() {
     console.log(`  -> First request: X-Cache=${missCacheHeader}, X-Response-Time=${missTime}`);
 
     // Second call: Cache HIT
-    const hitRes = await fetch('http://127.0.0.1:4098/api/products?category=Stationery');
+    const hitRes = await fetch('http://127.0.0.1:4098/api/products?category=Chips');
     const hitCacheHeader = hitRes.headers.get('X-Cache');
     const hitTime = hitRes.headers.get('X-Response-Time');
     if (hitCacheHeader !== 'HIT') {
@@ -89,7 +89,7 @@ async function runOptimizationsTests() {
     if (mutateRes.status !== 200) throw new Error(`Ops update failed: ${mutateRes.status}`);
 
     // Requesting products again should be a cache MISS with fresh data
-    const refreshedRes = await fetch('http://127.0.0.1:4098/api/products?category=Stationery');
+    const refreshedRes = await fetch('http://127.0.0.1:4098/api/products?category=Chips');
     const refreshedCacheHeader = refreshedRes.headers.get('X-Cache');
     const refreshedData = await refreshedRes.json();
     const updatedPrd = refreshedData.products.find((p: any) => p.id === 'PRD-001');

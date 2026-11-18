@@ -8,7 +8,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createServer, resetStore, loadStore, DATA_FILE } from './server.ts';
+import { createServer, resetStore, loadStore, DATA_FILE } from './server.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -162,7 +162,7 @@ async function runTests() {
       '/api/checkout',
       'POST',
       {
-        items: [{ product_id: 'PRD-001', quantity: 2 }], // 2 x 6500 = 13000 paise
+        items: [{ product_id: 'PRD-001', quantity: 2 }], // 2 x 2000 = 4000 paise
         fulfilment_method: 'Campus Kiosk Pickup',
         collection_point: 'Main Canteen Counter 1',
         idempotency_key: idempKey,
@@ -170,8 +170,8 @@ async function runTests() {
       studentToken
     );
     assert(checkoutRes.status === 200, 'Student checkout should succeed');
-    assert(checkoutRes.data.total_amount_paise === 13000, 'Total should be 13000 paise');
-    assert(checkoutRes.data.new_balance_paise === 122000, 'Balance after checkout should be 122000 paise');
+    assert(checkoutRes.data.total_amount_paise === 4000, 'Total should be 4000 paise');
+    assert(checkoutRes.data.new_balance_paise === 131000, 'Balance after checkout should be 131000 paise');
 
     // Idempotency replay check
     const replayRes = await apiRequest(
@@ -185,7 +185,7 @@ async function runTests() {
     );
     assert(replayRes.status === 200, 'Idempotency replay should succeed with 200');
     assert(replayRes.data.order_id === checkoutRes.data.order_id, 'Should return same order ID');
-    assert(replayRes.data.new_balance_paise === 122000, 'Balance must NOT be deducted again');
+    assert(replayRes.data.new_balance_paise === 131000, 'Balance must NOT be deducted again');
 
     // Parent sees order in parent dashboard
     const parentDash = await apiRequest('/api/parent/dashboard', 'GET', undefined, parentToken);
@@ -224,7 +224,7 @@ async function runTests() {
       opsToken
     );
     assert(adjRes.status === 200, 'Ops manual adjustment should succeed');
-    assert(adjRes.data.new_balance_paise === 127000, 'Balance should reflect credit');
+    assert(adjRes.data.new_balance_paise === 136000, 'Balance should reflect credit');
 
     // College dashboard privacy check
     const collegeDash = await apiRequest('/api/college/dashboard', 'GET', undefined, collegeToken);
@@ -291,7 +291,7 @@ async function runTests() {
       '/api/checkout',
       'POST',
       {
-        items: [{ product_id: 'PRD-004', quantity: 1 }], // 1500 paise
+        items: [{ product_id: 'PRD-004', quantity: 1 }], // 2000 paise (Kurkure)
         fulfilment_method: 'Campus Kiosk Pickup',
         collection_point: 'Science Block Kiosk',
         idempotency_key: `sneha-order-${Date.now()}`,
@@ -299,16 +299,16 @@ async function runTests() {
       snehaToken
     );
     assert(snehaOrder.status === 200, 'Sneha checkout should succeed');
-    assert(snehaOrder.data.new_balance_paise === 28500, 'Balance after checkout should be 28,500 paise');
+    assert(snehaOrder.data.new_balance_paise === 28000, 'Balance after checkout should be 28,000 paise');
 
     // Re-verify persistence from disk after checkout
     const storeAfterCheckout = loadStore(DATA_FILE);
     const reloadedSnehaWallet = storeAfterCheckout.wallets.get(newStudentId);
-    assert(reloadedSnehaWallet?.balance_paise === 28500, 'Persisted balance after checkout must be 28,500 paise');
+    assert(reloadedSnehaWallet?.balance_paise === 28000, 'Persisted balance after checkout must be 28,000 paise');
 
     const reloadedOrder = storeAfterCheckout.orders.find((o) => o.id === snehaOrder.data.order_id);
     assert(Boolean(reloadedOrder), 'Order must be permanently saved to disk');
-    assert(reloadedOrder?.total_amount_paise === 1500, 'Order amount must match');
+    assert(reloadedOrder?.total_amount_paise === 2000, 'Order amount must match');
 
     console.log('  -> Test 3 Passed: Step-by-step student data persistence and lifecycle verified.');
     console.log('\n[Success] ALL TYPESCRIPT TESTS PASSED (100% OK)');
