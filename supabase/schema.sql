@@ -541,5 +541,20 @@ GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
 
+-- ------------------------------------------------------------------------------
+-- 6. Supabase Realtime Publication Subscriptions
+-- ------------------------------------------------------------------------------
+
+DO $$
+BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE orders;
+    ALTER PUBLICATION supabase_realtime ADD TABLE wallets;
+    ALTER PUBLICATION supabase_realtime ADD TABLE products;
+    ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+    ALTER PUBLICATION supabase_realtime ADD TABLE spending_controls;
+    ALTER PUBLICATION supabase_realtime ADD TABLE wallet_transactions;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
 -- Notify PostgREST to reload schema cache immediately
 NOTIFY pgrst, 'reload schema';

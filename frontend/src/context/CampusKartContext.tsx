@@ -11,6 +11,7 @@ import type {
   Student,
   ParentAccount,
   Order,
+  Notification,
   FundingReceipt,
   PortalType,
   StudentScreen,
@@ -135,6 +136,129 @@ export const CampusKartProvider: React.FC<{ children: ReactNode }> = ({ children
     syncWithBackend();
     return () => {
       mounted = false;
+    };
+  }, []);
+
+  // Supabase Realtime WebSocket Subscriptions for live multi-portal reactive updates
+  useEffect(() => {
+    if (!supabaseService.isAvailable()) return;
+
+    const unsubscribe = supabaseService.subscribeToEcosystem({
+      onOrderChange: (payload) => {
+        if (!payload?.new) return;
+        const newOrder = payload.new;
+        setEcosystem((prev) => {
+          const exists = prev.orders.some(
+            (o) => o.id === newOrder.id || (newOrder.idempotency_key && o.txnRef === newOrder.idempotency_key)
+          );
+          if (exists) {
+            return {
+              ...prev,
+              orders: prev.orders.map((o) => {
+                if (o.id === newOrder.id || (newOrder.idempotency_key && o.txnRef === newOrder.idempotency_key)) {
+                  return {
+                    ...o,
+                    status: newOrder.fulfilment_status || o.status,
+                    paymentStatus: newOrder.payment_status === 'paid' ? 'Paid via CampusKart Wallet' : o.paymentStatus,
+                  };
+                }
+                return o;
+              }),
+            };
+          }
+          return prev;
+        });
+
+        if (newOrder.fulfilment_status) {
+          const shortId = newOrder.id ? (newOrder.id.length > 8 ? newOrder.id.slice(0, 8) : newOrder.id) : 'Order';
+          showToast(
+            'Order Status Push',
+            `Order #${shortId} status changed to "${newOrder.fulfilment_status}"`,
+            'info'
+          );
+        }
+      },
+      onWalletChange: (payload) => {
+        if (!payload?.new) return;
+        const updatedWallet = payload.new;
+        const newBal = Math.round(Number(updatedWallet.balance_paise || 0) / 100);
+        const resolvedStudentCode = supabaseService.getStudentCodeByUuid(updatedWallet.student_id);
+        setEcosystem((prev) => ({
+          ...prev,
+          students: prev.students.map((s) => {
+            if (s.id === resolvedStudentCode || s.id === updatedWallet.student_id) {
+              return { ...s, walletBalance: newBal };
+            }
+            return s;
+          }),
+        }));
+      },
+      onProductChange: (payload) => {
+        if (!payload?.new) return;
+        const p = payload.new;
+        setEcosystem((prev) => ({
+          ...prev,
+          products: prev.products.map((prod) => {
+            if (prod.id === p.id || prod.name.toLowerCase() === (p.name || '').toLowerCase()) {
+              return {
+                ...prod,
+                stock: p.stock_quantity !== undefined ? p.stock_quantity : prod.stock,
+                price: p.price_paise !== undefined ? Math.round(p.price_paise / 100) : prod.price,
+                active: p.is_available !== undefined ? p.is_available : prod.active,
+              };
+            }
+            return prod;
+          }),
+        }));
+      },
+      onNotificationInsert: (payload) => {
+        if (!payload?.new) return;
+        const n = payload.new;
+        const notifStudentCode = supabaseService.getStudentCodeByUuid(n.student_id);
+        const notif: Notification = {
+          id: n.id || `NOTIF-${Date.now()}`,
+          target: 'both',
+          studentId: notifStudentCode || n.student_id || 'CK-2026-101',
+          title: n.title || 'Campus Notification',
+          message: n.message || '',
+          time: 'Just now',
+          type: (n.type as any) || 'system',
+          read: n.is_read || false,
+        };
+        setEcosystem((prev) => ({
+          ...prev,
+          notifications: [notif, ...prev.notifications.filter((existing) => existing.id !== notif.id)],
+        }));
+        showToast(notif.title, notif.message, 'info');
+      },
+      onControlsChange: (payload) => {
+        if (!payload?.new) return;
+        const c = payload.new;
+        const studentCode = supabaseService.getStudentCodeByUuid(c.student_id) || 'CK-2026-101';
+        setEcosystem((prev) => ({
+          ...prev,
+          spendingControls: {
+            ...prev.spendingControls,
+            [studentCode]: {
+              dailyLimitEnabled: Boolean(c.daily_limit_paise),
+              dailyLimit: c.daily_limit_paise ? Math.round(Number(c.daily_limit_paise) / 100) : 500,
+              weeklyLimitEnabled: Boolean(c.weekly_limit_paise),
+              weeklyLimit: c.weekly_limit_paise ? Math.round(Number(c.weekly_limit_paise) / 100) : 2000,
+              monthlyLimitEnabled: Boolean(c.monthly_limit_paise),
+              monthlyLimit: c.monthly_limit_paise ? Math.round(Number(c.monthly_limit_paise) / 100) : 5000,
+              restrictedCategories: c.restricted_categories || [],
+              lowBalanceAlertEnabled: true,
+              lowBalanceThreshold: c.low_balance_threshold_paise ? Math.round(Number(c.low_balance_threshold_paise) / 100) : 150,
+              instantTxnNotification: c.instant_txn_notification ?? true,
+              spendingAlertsEnabled: c.spending_alerts_enabled ?? true,
+            },
+          },
+        }));
+      },
+    });
+
+    return () => {
+      unsubscribe();
     };
   }, []);
 

@@ -11,6 +11,7 @@ import {
   controlService,
   orderService,
   parentService,
+  realtimeService,
   notificationService,
   ecosystemService,
 } from './supabase';
@@ -63,6 +64,10 @@ export const supabaseService = {
 
   async enrollStudent(student: Student, initialBalanceRupees: number): Promise<boolean> {
     return studentService.enrollStudent(student, initialBalanceRupees);
+  },
+
+  getStudentCodeByUuid(uuid: string): string {
+    return studentService.getStudentCodeByUuid(uuid);
   },
 
   /**
@@ -128,6 +133,17 @@ export const supabaseService = {
 
   async fetchNotifications(): Promise<any[]> {
     return notificationService.fetchNotifications();
+  },
+
+  /**
+   * Realtime Subscriptions
+   */
+  subscribeToEcosystem(handlers: Parameters<typeof realtimeService.subscribeToEcosystem>[0]) {
+    return realtimeService.subscribeToEcosystem(handlers);
+  },
+
+  isRealtimeSubscribed(): boolean {
+    return realtimeService.isSubscribed();
   },
 };
 

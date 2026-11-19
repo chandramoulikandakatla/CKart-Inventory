@@ -154,3 +154,15 @@ CREATE POLICY "student_read_own_orders" ON orders FOR SELECT USING (
 CREATE POLICY "student_read_own_notifications" ON notifications FOR SELECT USING (
     student_id IN (SELECT id FROM students WHERE auth_user_id = auth.uid())
 );
+
+-- Supabase Realtime Subscriptions Publication
+DO $$
+BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE orders;
+    ALTER PUBLICATION supabase_realtime ADD TABLE wallets;
+    ALTER PUBLICATION supabase_realtime ADD TABLE products;
+    ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+    ALTER PUBLICATION supabase_realtime ADD TABLE spending_controls;
+    ALTER PUBLICATION supabase_realtime ADD TABLE wallet_transactions;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;

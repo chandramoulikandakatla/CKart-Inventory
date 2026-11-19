@@ -7,8 +7,9 @@ import http from 'node:http';
 import { PORT, HOST, DATA_FILE, SUPABASE_URL } from './src/config.js';
 import { handleApiRequest } from './src/routes/index.js';
 import { store, loadStore, saveStore, resetStore } from './src/store/index.js';
+import { logger } from './src/utils/index.js';
 
-export { PORT, HOST, DATA_FILE, store, loadStore, saveStore, resetStore };
+export { PORT, HOST, DATA_FILE, store, loadStore, saveStore, resetStore, logger };
 
 export function createServer(): http.Server {
   return http.createServer(handleApiRequest);
@@ -18,17 +19,20 @@ export function createServer(): http.Server {
 if (process.argv[1] && process.argv[1].endsWith('server.ts')) {
   const server = createServer();
   server.listen(PORT, HOST, () => {
-    console.log(`[CampusKart] Modular TypeScript Backend active on http://${HOST}:${PORT}`);
-    console.log(`[CampusKart] Database Provider: ${SUPABASE_URL ? 'Supabase' : 'File-Backed TypeScript Engine'}`);
-    console.log(`[CampusKart] Persistent Storage: ${DATA_FILE}`);
+    logger.info({
+      host: HOST,
+      port: PORT,
+      database: SUPABASE_URL ? 'Supabase' : 'File-Backed Engine',
+      storageFile: DATA_FILE,
+    }, `CampusKart Modular TypeScript Backend active on http://${HOST}:${PORT}`);
   });
 
   // Graceful shutdown handling
   const shutdown = (signal: string) => {
-    console.log(`\n[CampusKart] Received ${signal}. Flushing store and closing server gracefully...`);
+    logger.info({ signal }, `Received ${signal}. Flushing store and closing server gracefully...`);
     saveStore(store);
     server.close(() => {
-      console.log('[CampusKart] Server closed cleanly.');
+      logger.info('CampusKart Server closed cleanly.');
       process.exit(0);
     });
   };

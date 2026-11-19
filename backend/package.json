@@ -9,7 +9,8 @@
     "test": "tsx test_backend.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.119.0"
+    "@supabase/supabase-js": "^2.119.0",
+    "pino": "^10.4.0"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

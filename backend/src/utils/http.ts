@@ -54,6 +54,7 @@ export function sendJson(
     'Access-Control-Allow-Origin': getCorsOrigin(incomingOrigin),
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
+    ...(req?._requestId ? { 'X-Request-Id': req._requestId } : {}),
     ...(responseTimeMs ? { 'X-Response-Time': responseTimeMs } : {}),
     ...(options?.cached !== undefined ? { 'X-Cache': options.cached ? 'HIT' : 'MISS' } : {}),
     ...(options?.customHeaders || {}),
@@ -67,4 +68,20 @@ export function getAuthHeader(req: http.IncomingMessage): string | null {
   const auth = req.headers.authorization;
   if (!auth || !auth.startsWith('Bearer ')) return null;
   return auth.slice(7).trim();
+}
+
+export function getCookie(req: http.IncomingMessage, name: string): string | null {
+  const cookieHeader = req.headers.cookie;
+  if (!cookieHeader) return null;
+  const match = cookieHeader.match(new RegExp(`(^|;\\s*)${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
+export function createSessionCookie(token: string, maxAgeSeconds = 86400): string {
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  return `session_token=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSeconds}${secure}`;
+}
+
+export function getAuthToken(req: http.IncomingMessage): string | null {
+  return getAuthHeader(req) || getCookie(req, 'session_token');
 }

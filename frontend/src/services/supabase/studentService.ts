@@ -8,7 +8,20 @@ import type { Student } from '../../types/ecosystem';
 import { INITIAL_STATE } from '../../constants/initialState';
 import { DbStudent, extractRelation } from './types';
 
+const studentUuidToCodeMap = new Map<string, string>([
+  ['a0000000-0000-0000-0000-000000000101', 'CK-2026-101'],
+  ['a0000000-0000-0000-0000-000000000102', 'CK-2026-102'],
+  ['a0000000-0000-0000-0000-000000000103', 'CK-2026-103'],
+]);
+
 export const studentService = {
+  /**
+   * Resolve a student UUID to their student code (e.g. CK-2026-101)
+   */
+  getStudentCodeByUuid(uuid: string): string {
+    return studentUuidToCodeMap.get(uuid) || uuid;
+  },
+
   /**
    * Fetch all registered students from Supabase with their wallets
    */
@@ -20,6 +33,12 @@ export const studentService = {
         .select('*, wallets(*), spending_controls(*)');
 
       if (error || !dbStudents) return null;
+
+      for (const s of dbStudents) {
+        if (s.id && s.student_code) {
+          studentUuidToCodeMap.set(s.id, s.student_code);
+        }
+      }
 
       const mappedStudents: Student[] = INITIAL_STATE.students.map((seedStu) => {
         const found = dbStudents.find((s: DbStudent) => s.student_code === seedStu.id);

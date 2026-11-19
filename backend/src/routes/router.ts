@@ -5,12 +5,30 @@
 import http from 'node:http';
 import { DATA_FILE, SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { store } from '../store/index.js';
-import { parseJsonBody, sendJson, getAuthHeader, getCorsOrigin } from '../utils/index.js';
+import {
+  parseJsonBody,
+  sendJson,
+  getAuthToken,
+  getCorsOrigin,
+  createSessionCookie,
+  logRequestStart,
+  logRequestComplete,
+  logger,
+} from '../utils/index.js';
 import { authService, productService, walletService, orderService, opsService } from '../services/index.js';
 import { productCache, metricsCache } from '../cache/index.js';
+import { verifyToken } from '../security/index.js';
 
 export async function handleApiRequest(req: http.IncomingMessage, res: http.ServerResponse) {
-  (req as any)._startTime = process.hrtime.bigint();
+  logRequestStart(req);
+
+  res.on('finish', () => {
+    logRequestComplete(req, res, {
+      role: (req as any)._userRole,
+      userId: (req as any)._userId,
+      error: (req as any)._error,
+    });
+  });
 
   // CORS Preflight
   if (req.method === 'OPTIONS') {
@@ -19,6 +37,7 @@ export async function handleApiRequest(req: http.IncomingMessage, res: http.Serv
       'Access-Control-Allow-Origin': getCorsOrigin(origin),
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Idempotency-Key',
+      'Access-Control-Allow-Credentials': 'true',
       'Access-Control-Max-Age': '86400',
     });
     res.end();
@@ -28,7 +47,15 @@ export async function handleApiRequest(req: http.IncomingMessage, res: http.Serv
   const parsedUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
   const pathname = parsedUrl.pathname;
   const method = req.method;
-  const token = getAuthHeader(req);
+  const token = getAuthToken(req);
+
+  if (token) {
+    const session = verifyToken(token);
+    if (session) {
+      (req as any)._userRole = session.role;
+      (req as any)._userId = session.entityId;
+    }
+  }
 
   try {
     // 1. Health
@@ -54,25 +81,37 @@ export async function handleApiRequest(req: http.IncomingMessage, res: http.Serv
     if (pathname === '/api/auth/verify-pin' && method === 'POST') {
       const body = await parseJsonBody(req);
       const resData = authService.studentVerifyPin(body);
-      return sendJson(res, resData.status, resData.data || { error: resData.error });
+      const customHeaders = resData.data?.token
+        ? { 'Set-Cookie': createSessionCookie(resData.data.token) }
+        : undefined;
+      return sendJson(res, resData.status, resData.data || { error: resData.error }, { customHeaders });
     }
 
     if (pathname === '/api/parent/auth/login' && method === 'POST') {
       const body = await parseJsonBody(req);
       const resData = authService.parentLogin(body);
-      return sendJson(res, resData.status, resData.data || { error: resData.error });
+      const customHeaders = resData.data?.token
+        ? { 'Set-Cookie': createSessionCookie(resData.data.token) }
+        : undefined;
+      return sendJson(res, resData.status, resData.data || { error: resData.error }, { customHeaders });
     }
 
     if (pathname === '/api/ops/auth/login' && method === 'POST') {
       const body = await parseJsonBody(req);
       const resData = authService.opsLogin(body);
-      return sendJson(res, resData.status, resData.data || { error: resData.error });
+      const customHeaders = resData.data?.token
+        ? { 'Set-Cookie': createSessionCookie(resData.data.token) }
+        : undefined;
+      return sendJson(res, resData.status, resData.data || { error: resData.error }, { customHeaders });
     }
 
     if (pathname === '/api/college/auth/login' && method === 'POST') {
       const body = await parseJsonBody(req);
       const resData = authService.collegeLogin(body);
-      return sendJson(res, resData.status, resData.data || { error: resData.error });
+      const customHeaders = resData.data?.token
+        ? { 'Set-Cookie': createSessionCookie(resData.data.token) }
+        : undefined;
+      return sendJson(res, resData.status, resData.data || { error: resData.error }, { customHeaders });
     }
 
     // 3. Products (with search, category filter, sorting & lazy pagination)
@@ -192,6 +231,7 @@ export async function handleApiRequest(req: http.IncomingMessage, res: http.Serv
     // 404 Fallback
     return sendJson(res, 404, { error: 'Route not found' });
   } catch (err: any) {
+    (req as any)._error = err?.message;
     return sendJson(res, 500, { error: err?.message || 'Internal Server Error' });
   }
 }

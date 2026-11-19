@@ -10,4 +10,5 @@ export * from './walletService';
 export * from './controlService';
 export * from './orderService';
 export * from './parentService';
+export * from './realtimeService';
 export * from './ecosystemService';

@@ -47,6 +47,11 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Test artifacts
+frontend/playwright-report/
+frontend/test-results/
+playwright-report/
+test-results/
 
 # Agent documentation and context
 docs/
