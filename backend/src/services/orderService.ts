@@ -5,6 +5,7 @@
 import { store, saveStore } from '../store/index.js';
 import { verifyToken } from '../security/index.js';
 import { productCache, metricsCache } from '../cache/index.js';
+import { persistCheckout, persistNotification } from './supabaseConnector.js';
 
 export const orderService = {
   checkout(token: string | null, body: any) {
@@ -150,6 +151,31 @@ export const orderService = {
     saveStore(store);
     productCache.invalidateTag('products');
     metricsCache.invalidateTag('college');
+
+    // Fire-and-forget Supabase persistence
+    if (student) {
+      persistCheckout({
+        studentCode: student.student_code,
+        items: orderItems.map((i) => ({
+          product_id: i.product_id,
+          name: i.name,
+          quantity: i.quantity,
+          unit_price_paise: i.unit_price_paise,
+        })),
+        totalPaise,
+        fulfilmentMethod: fulfilment_method || 'Campus Kiosk Pickup',
+        collectionPoint: collection_point || 'Main Canteen Counter 1',
+        idempotencyKey: idempotency_key || `idemp-${Date.now()}`,
+        txnRef: reference,
+        orderRef: reference,
+      }).catch(console.warn);
+      persistNotification({
+        studentCode: student.student_code,
+        title: `Order Confirmed (${reference})`,
+        message: `Your order for ₹${(totalPaise / 100).toFixed(2)} has been placed. Ref: ${reference}`,
+        type: 'order',
+      }).catch(console.warn);
+    }
 
     return {
       status: 200,

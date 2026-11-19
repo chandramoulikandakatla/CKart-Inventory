@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { supabaseService } from '../../services/supabaseService';
+import { backendApi, getOpsToken } from '../../services/api/backendApi';
 import type {
   EcosystemState,
   Product,
@@ -317,7 +318,16 @@ export function useOpsActions(params: OpsActionParams) {
       ],
     }));
 
-    if (supabaseService.isAvailable()) {
+    const opsToken = getOpsToken();
+    if (opsToken) {
+      backendApi.manualAdjust(opsToken, {
+        student_id: stu.id,
+        type: manualAdjForm.type.toUpperCase(),
+        amount_paise: Math.round(rawAmt * 100),
+        reason: manualAdjForm.reason.trim(),
+        operator: manualAdjForm.operator,
+      }).catch(console.warn);
+    } else if (supabaseService.isAvailable()) {
       supabaseService.recordManualAdjustment({
         studentCode: stu.id,
         amountRupees: rawAmt,

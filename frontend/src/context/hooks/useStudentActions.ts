@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { supabaseService } from '../../services/supabaseService';
+import { backendApi, getStudentToken } from '../../services/api/backendApi';
 import type {
   EcosystemState,
   Student,
@@ -94,6 +95,8 @@ export function useStudentActions(params: StudentActionParams) {
     setTrackingOrderId,
   } = params;
 
+  const API_BASE = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_URL as string) || 'http://127.0.0.1:8080';
+
   const handleValidateStudentCredentials = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setCredError('');
@@ -117,6 +120,13 @@ export function useStudentActions(params: StudentActionParams) {
       return;
     }
 
+    // Fire backend step-1 auth (graceful degradation — backend may not be running in demo mode)
+    fetch(`${API_BASE}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ student_code: credIdInput.trim(), password: credPassInput.trim() }),
+    }).catch(() => { /* backend offline in demo mode — ignore */ });
+
     setPendingStudent(student);
     setPinInput('');
     setPinError('');
@@ -130,11 +140,29 @@ export function useStudentActions(params: StudentActionParams) {
       setPinError(`Incorrect 4-digit CampusKart PIN. Demo PIN for ${pendingStudent.firstName} is ${pendingStudent.pin}.`);
       return;
     }
+
+    // Proceed with local auth immediately (graceful degradation if backend is offline)
     setLoggedStudentId(pendingStudent.id);
     setStudentAuthed(true);
     setPinError('');
     setStudentScreen('home');
     showToast('Session Established', `Welcome back, ${pendingStudent.name}!`, 'success');
+
+    // Fire backend step-2 verify-pin to obtain JWT token (fire-and-forget with graceful degradation)
+    const capturedStudentId = pendingStudent.id;
+    fetch(`${API_BASE}/api/auth/verify-pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ student_code: capturedStudentId, pin: pinInput.trim() }),
+    })
+      .then((res) => res.ok ? res.json() : null)
+      .then((data: any) => {
+        const token = data?.session_token || data?.token;
+        if (token) {
+          localStorage.setItem('campuskart_student_token', token);
+        }
+      })
+      .catch(() => { /* backend offline in demo mode — ignore */ });
   };
 
   const handleOpenProductDetail = (productId: string) => {
@@ -402,8 +430,33 @@ export function useStudentActions(params: StudentActionParams) {
         notifications: [...newNotifs, ...prev.notifications],
       }));
 
-      // Synchronize live checkout with Supabase
-      if (supabaseService.isAvailable()) {
+      // Synchronize live checkout via backend API
+      const studentToken = getStudentToken();
+      if (studentToken) {
+        backendApi
+          .checkout(studentToken, {
+            items: populatedCart.map((i) => ({
+              product_id: i.id,
+              quantity: i.qty,
+            })),
+            fulfilment_method: fulfilmentType,
+            collection_point: selectedCollectionPoint,
+            idempotency_key: constidemKey,
+            simulate_failure: simulateFailureMode,
+          })
+          .then((res) => {
+            if (res?.new_balance_paise != null) {
+              const authoritativeBal = res.new_balance_paise / 100;
+              setEcosystem((prev) => ({
+                ...prev,
+                students: prev.students.map((s) =>
+                  s.id === currentStudent.id ? { ...s, walletBalance: authoritativeBal } : s
+                ),
+              }));
+            }
+          })
+          .catch((err) => console.warn('[checkout] backendApi error:', err));
+      } else if (supabaseService.isAvailable()) {
         supabaseService.submitOrder({
           studentCode: currentStudent.id,
           items: populatedCart.map((i) => ({

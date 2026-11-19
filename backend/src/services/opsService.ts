@@ -5,6 +5,7 @@
 import { store, saveStore } from '../store/index.js';
 import { verifyToken, hashSecret } from '../security/index.js';
 import { productCache } from '../cache/index.js';
+import { persistOrderStatusUpdate, persistNotification } from './supabaseConnector.js';
 
 export const opsService = {
   getDashboard(token: string | null) {
@@ -59,6 +60,18 @@ export const opsService = {
     });
 
     saveStore(store);
+
+    // Fire-and-forget Supabase persistence
+    persistOrderStatusUpdate({ orderRef: order.reference || order.id, status }).catch(console.warn);
+    const targetStudent = store.students.find((s) => s.id === order.student_id);
+    if (targetStudent) {
+      persistNotification({
+        studentCode: targetStudent.student_code,
+        title: `Order Status: ${status}`,
+        message: `Order #${order.reference || order.id} is now ${status}.`,
+        type: 'order',
+      }).catch(console.warn);
+    }
 
     return { status: 200, data: { success: true, order_id: order.id, status } };
   },

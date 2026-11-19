@@ -34,4 +34,5 @@ export const HOST = process.env.HOST || '127.0.0.1';
 export const SESSION_SECRET = process.env.CAMPUSKART_SESSION_SECRET || 'campuskart-ts-secure-secret-key-2026';
 export const SUPABASE_URL = process.env.SUPABASE_URL || '';
 export const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
+export const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 export const DATA_FILE = process.env.CAMPUSKART_DB_FILE || path.resolve(__dirname, '../campuskart_data.json');

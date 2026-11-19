@@ -151,10 +151,40 @@ export async function handleApiRequest(req: http.IncomingMessage, res: http.Serv
       });
     }
 
-    // 4. Dashboards
+    // 4. Dashboards & Student Resources
     if (pathname === '/api/student/dashboard' && method === 'GET') {
       const resData = authService.getStudentDashboard(token);
       return sendJson(res, resData.status, resData.data || { error: resData.error });
+    }
+
+    const studentMatch = pathname.match(/^\/api\/student\/([^/]+)\/(wallet|orders|notifications)$/);
+    if (studentMatch && method === 'GET') {
+      const studentCode = decodeURIComponent(studentMatch[1]);
+      const subResource = studentMatch[2];
+      const student = store.students.find((s) => s.student_code === studentCode || s.id === studentCode);
+      if (!student) {
+        return sendJson(res, 404, { error: 'Student not found' });
+      }
+
+      if (subResource === 'wallet') {
+        const wallet = store.wallets.get(student.id);
+        return sendJson(res, 200, {
+          student_code: student.student_code,
+          balance_paise: wallet?.balance_paise || 0,
+          balance_rupees: Math.round((wallet?.balance_paise || 0) / 100),
+          currency: 'INR',
+        });
+      }
+
+      if (subResource === 'orders') {
+        const orders = store.orders.filter((o) => o.student_id === student.id);
+        return sendJson(res, 200, { orders });
+      }
+
+      if (subResource === 'notifications') {
+        const notifs = store.notifications.filter((n) => n.student_id === student.id);
+        return sendJson(res, 200, { notifications: notifs });
+      }
     }
 
     if (pathname === '/api/parent/dashboard' && method === 'GET') {
@@ -226,6 +256,35 @@ export async function handleApiRequest(req: http.IncomingMessage, res: http.Serv
       const body = await parseJsonBody(req);
       const resData = opsService.updateProduct(token, body);
       return sendJson(res, resData.status, resData.data || { error: resData.error });
+    }
+
+    // 8. Student data GET routes
+    const walletMatch = pathname.match(/^\/api\/student\/([^\/]+)\/wallet$/);
+    if (walletMatch && method === 'GET') {
+      const studentCode = decodeURIComponent(walletMatch[1]);
+      const student = store.students.find((s) => s.student_code === studentCode || s.id === studentCode);
+      if (!student) return sendJson(res, 404, { error: 'Student not found' });
+      const wallet = store.wallets.get(student.id);
+      if (!wallet) return sendJson(res, 404, { error: 'Wallet not found' });
+      return sendJson(res, 200, { student_code: student.student_code, wallet });
+    }
+
+    const ordersMatch = pathname.match(/^\/api\/student\/([^\/]+)\/orders$/);
+    if (ordersMatch && method === 'GET') {
+      const studentCode = decodeURIComponent(ordersMatch[1]);
+      const student = store.students.find((s) => s.student_code === studentCode || s.id === studentCode);
+      if (!student) return sendJson(res, 404, { error: 'Student not found' });
+      const orders = store.orders.filter((o) => o.student_id === student.id);
+      return sendJson(res, 200, { student_code: student.student_code, orders });
+    }
+
+    const notificationsMatch = pathname.match(/^\/api\/student\/([^\/]+)\/notifications$/);
+    if (notificationsMatch && method === 'GET') {
+      const studentCode = decodeURIComponent(notificationsMatch[1]);
+      const student = store.students.find((s) => s.student_code === studentCode || s.id === studentCode);
+      if (!student) return sendJson(res, 404, { error: 'Student not found' });
+      const notifications = store.notifications.filter((n) => n.student_id === student.id);
+      return sendJson(res, 200, { student_code: student.student_code, notifications });
     }
 
     // 404 Fallback

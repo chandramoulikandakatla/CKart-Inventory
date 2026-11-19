@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { supabaseService } from '../../services/supabaseService';
+import { backendApi, getParentToken, type SpendingControlsPayload } from '../../services/api/backendApi';
 import type {
   EcosystemState,
   Student,
@@ -56,6 +57,7 @@ export function useParentActions(params: ParentActionParams) {
     setParentPayStep,
     setLastFundingReceipt,
   } = params;
+
 
   const handleParentLogin = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -155,6 +157,15 @@ export function useParentActions(params: ParentActionParams) {
       `Welcome, ${matchedParent.name}! Managing account for ${matchedStudent.name} (${matchedStudent.id}).`,
       'success'
     );
+
+    // Fire backend parent auth to obtain JWT token (fire-and-forget with graceful degradation)
+    backendApi.loginParent(userInput, passInput)
+      .then((data) => {
+        if (data?.token) {
+          localStorage.setItem('campuskart_parent_token', data.token);
+        }
+      })
+      .catch(() => { /* backend offline in demo mode — ignore */ });
   };
 
   const handleSwitchLinkedChild = (studentId: string) => {
@@ -233,13 +244,17 @@ export function useParentActions(params: ParentActionParams) {
         notifications: [newNotif, ...prev.notifications],
       }));
 
-      // Synchronize live with Supabase
-      if (supabaseService.isAvailable()) {
-        supabaseService.topUpWallet(parentLinkedStudent.id, amt, fundingMethod).then((dbBal) => {
-          if (dbBal !== null) {
+      // Synchronize live with backend API (fire-and-forget; optimistic balance already set above)
+      const parentToken = getParentToken();
+      if (parentToken) {
+        backendApi.fundWallet(parentToken, addPaise, fundingMethod).then((result) => {
+          if (result?.new_balance_paise != null) {
+            const authoritativeBal = result.new_balance_paise / 100;
             setEcosystem((prev) => ({
               ...prev,
-              students: prev.students.map((s) => (s.id === parentLinkedStudent.id ? { ...s, walletBalance: dbBal } : s)),
+              students: prev.students.map((s) =>
+                s.id === parentLinkedStudent.id ? { ...s, walletBalance: authoritativeBal } : s
+              ),
             }));
           }
         });
@@ -284,7 +299,22 @@ export function useParentActions(params: ParentActionParams) {
       ],
     }));
 
-    if (supabaseService.isAvailable()) {
+    const parentToken = getParentToken();
+    if (parentToken) {
+      backendApi.updateSpendingControls(parentToken, {
+        daily_limit_paise: updatedControls.dailyLimit * 100,
+        daily_limit_enabled: updatedControls.dailyLimitEnabled,
+        weekly_limit_paise: updatedControls.weeklyLimit * 100,
+        weekly_limit_enabled: updatedControls.weeklyLimitEnabled,
+        monthly_limit_paise: updatedControls.monthlyLimit * 100,
+        monthly_limit_enabled: updatedControls.monthlyLimitEnabled,
+        restricted_categories: updatedControls.restrictedCategories || [],
+        low_balance_threshold_paise: updatedControls.lowBalanceThreshold * 100,
+        low_balance_alert_enabled: updatedControls.lowBalanceAlertEnabled,
+        instant_txn_notification: updatedControls.instantTxnNotification,
+        spending_alerts_enabled: updatedControls.spendingAlertsEnabled,
+      }).catch(console.warn);
+    } else if (supabaseService.isAvailable()) {
       supabaseService.updateSpendingControls(parentLinkedStudent.id, updatedControls);
     }
 

@@ -38,31 +38,41 @@ export const authService = {
     };
   },
 
-  studentVerifyPin(body: { pre_auth_token?: string; pin?: string }) {
-    const { pre_auth_token, pin } = body;
-    if (!pre_auth_token || !pin) {
+  studentVerifyPin(body: { pre_auth_token?: string; pin?: string; student_code?: string }) {
+    const { pre_auth_token, pin, student_code } = body;
+    if (!pin) {
+      return { status: 400, error: 'Missing PIN' };
+    }
+
+    let student = null;
+    if (pre_auth_token) {
+      const preAuth = preAuthTokens.get(pre_auth_token);
+      if (!preAuth || Date.now() > preAuth.expiresAt) {
+        return { status: 401, error: 'Pre-auth token expired or invalid' };
+      }
+
+      preAuth.attempts = (preAuth.attempts || 0) + 1;
+      if (preAuth.attempts > 5) {
+        preAuthTokens.delete(pre_auth_token);
+        return { status: 429, error: 'Too many failed PIN attempts. Pre-authentication session locked.' };
+      }
+
+      student = store.students.find((s) => s.id === preAuth.studentId);
+      if (!student || !verifySecret(pin, student.pin_hash)) {
+        return { status: 401, error: `Incorrect 4-digit PIN. (${5 - preAuth.attempts} attempts remaining)` };
+      }
+      preAuthTokens.delete(pre_auth_token);
+    } else if (student_code) {
+      student = store.students.find((s) => s.student_code === student_code || s.id === student_code);
+      if (!student || !verifySecret(pin, student.pin_hash)) {
+        return { status: 401, error: 'Incorrect 4-digit PIN.' };
+      }
+    } else {
       return { status: 400, error: 'Missing token or PIN' };
     }
 
-    const preAuth = preAuthTokens.get(pre_auth_token);
-    if (!preAuth || Date.now() > preAuth.expiresAt) {
-      return { status: 401, error: 'Pre-auth token expired or invalid' };
-    }
-
-    preAuth.attempts = (preAuth.attempts || 0) + 1;
-    if (preAuth.attempts > 5) {
-      preAuthTokens.delete(pre_auth_token);
-      return { status: 429, error: 'Too many failed PIN attempts. Pre-authentication session locked.' };
-    }
-
-    const student = store.students.find((s) => s.id === preAuth.studentId);
-    if (!student || !verifySecret(pin, student.pin_hash)) {
-      return { status: 401, error: `Incorrect 4-digit PIN. (${5 - preAuth.attempts} attempts remaining)` };
-    }
-
-    preAuthTokens.delete(pre_auth_token);
     const sessionToken = generateToken('student', student.id, { student_code: student.student_code });
-    return { status: 200, data: { session_token: sessionToken } };
+    return { status: 200, data: { session_token: sessionToken, token: sessionToken } };
   },
 
   parentLogin(body: {

@@ -4,6 +4,7 @@
 
 import { store, saveStore } from '../store/index.js';
 import { verifyToken } from '../security/index.js';
+import { persistWalletTopUp, persistNotification, persistManualAdjustment, persistSpendingControls } from './supabaseConnector.js';
 
 export const walletService = {
   fundWallet(token: string | null, body: { amount_paise?: number; amount?: number; method?: string }) {
@@ -39,6 +40,23 @@ export const walletService = {
 
     saveStore(store);
 
+    // Fire-and-forget Supabase persistence
+    const studentRecord = store.students.find((s) => s.id === targetStudentId);
+    if (studentRecord) {
+      persistWalletTopUp({
+        studentCode: studentRecord.student_code,
+        amountPaise,
+        method: body.method || 'Online Banking',
+        txnRef: ref,
+      }).catch(console.warn);
+      persistNotification({
+        studentCode: studentRecord.student_code,
+        title: 'Wallet Topped Up',
+        message: `₹${(amountPaise / 100).toFixed(2)} added to your wallet. Ref: ${ref}`,
+        type: 'wallet',
+      }).catch(console.warn);
+    }
+
     return {
       status: 200,
       data: {
@@ -70,6 +88,16 @@ export const walletService = {
 
     store.spending_controls.set(studentId, controls);
     saveStore(store);
+
+    // Fire-and-forget Supabase persistence
+    const studentRecord = store.students.find((s) => s.id === studentId);
+    if (studentRecord) {
+      persistSpendingControls({
+        studentCode: studentRecord.student_code,
+        dailyLimitPaise: controls.daily_limit_paise,
+        spendingAlertsEnabled: !controls.card_locked,
+      }).catch(console.warn);
+    }
 
     return { status: 200, data: { success: true, controls } };
   },
@@ -116,6 +144,18 @@ export const walletService = {
     });
 
     saveStore(store);
+
+    // Fire-and-forget Supabase persistence
+    const session2 = token ? verifyToken(token) : null;
+    const operatorId = session2?.entityId || 'unknown-ops';
+    persistManualAdjustment({
+      studentCode: student.student_code,
+      amountPaise: amount_paise,
+      type: type as 'CREDIT' | 'DEBIT',
+      reason: reason || 'Staff Adjustment',
+      operator: operatorId,
+      txnRef: ref,
+    }).catch(console.warn);
 
     return {
       status: 200,
